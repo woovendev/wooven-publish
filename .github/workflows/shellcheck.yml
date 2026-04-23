@@ -10,5 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # ubuntu-latest does not always ship shellcheck on PATH — install explicitly.
+      - name: Install ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
       - name: Run shellcheck
-        run: shellcheck install.sh bin/wooven-publish
+        run: shellcheck --version && shellcheck install.sh bin/wooven-publish

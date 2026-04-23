@@ -206,11 +206,14 @@ for entry in "${FILES[@]}"; do
   esac
 done
 if [[ "$HAS_INDEX" -eq 0 ]]; then
-  echo "$(c_yellow " warn:") no index.html at folder root"
+  printf '%s' "$(c_yellow " warn:")"
+  echo " no index.html at folder root"
   if [[ "$ROOT_HTML_COUNT" -eq 1 ]]; then
-    echo "$(c_dim "        site root will 404 — rename '$ROOT_HTML' to 'index.html' to fix")"
+    c_dim "        site root will 404 — rename '$ROOT_HTML' to 'index.html' to fix"
+    echo
   else
-    echo "$(c_dim "        site root will 404 — only files reachable at https://{slug}.wooven.dev/<path>")"
+    c_dim "        site root will 404 — only files reachable at https://{slug}.wooven.dev/<path>"
+    echo
   fi
 fi
 

@@ -2,6 +2,8 @@
 
 ## v0.1.1 — index.html UX
 
+- CI: install `shellcheck` via apt before lint (reliable on `ubuntu-latest`)
+- Shellcheck-clean output for the new warning lines (SC2005)
 - CLI warns when the folder has no root `index.html` (site root would 404; only full paths work)
 - If exactly one root-level `.html`/`.htm` exists, the warning suggests renaming it to `index.html`
 - `SKILL.md`: explicit rule that `index.html` at the root is required for `https://{slug}.wooven.dev/`
