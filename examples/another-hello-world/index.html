@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Mesh Shift — From Data Centers to Distributed Compute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf7;
+    --ink: #1a1a1f;
+    --ink-soft: #4a4a55;
+    --ink-mute: #8a8a95;
+    --line: rgba(26, 26, 31, 0.08);
+    --accent: #6b5cff;
+
+    --p-mint:    #d9f0e3;
+    --p-peach:   #ffe4d4;
+    --p-lilac:   #e6dcff;
+    --p-sky:     #d8e8ff;
+    --p-butter:  #fff1c9;
+    --p-rose:    #ffd9e3;
+    --p-sage:    #e3ecd9;
+    --p-cream:   #fff0e0;
+
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --slow: 900ms;
+    --med: 600ms;
+    --fast: 300ms;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'ss01','cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.45;
+    overflow-x: hidden;
+  }
+
+  .serif { font-family: 'Instrument Serif', 'Times New Roman', serif; font-weight: 400; font-style: italic; }
+
+  /* ───── Page background ambient gradient ───── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 15% 10%, rgba(217, 240, 227, 0.6), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 90% 20%, rgba(255, 228, 212, 0.55), transparent 60%),
+      radial-gradient(ellipse 90% 60% at 50% 100%, rgba(230, 220, 255, 0.5), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 30s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    0%   { transform: translate3d(0,0,0) scale(1); }
+    100% { transform: translate3d(-2%, 1%, 0) scale(1.05); }
+  }
+
+  /* ───── Layout ───── */
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 32px 40px 80px;
+  }
+
+  nav.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 60px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 500; font-size: 15px; letter-spacing: -0.01em;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: conic-gradient(from 90deg, #d9f0e3, #e6dcff, #ffe4d4, #d8e8ff, #d9f0e3);
+    box-shadow: inset 0 0 0 4px var(--bg);
+    animation: spin 18s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--ink-soft); }
+  .nav-links a { color: inherit; text-decoration: none; transition: color var(--fast) var(--ease); }
+  .nav-links a:hover { color: var(--ink); }
+
+  /* ───── Hero ───── */
+  .hero {
+    max-width: 880px;
+    margin: 0 auto 64px;
+    text-align: center;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 6px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.5);
+    backdrop-filter: blur(8px);
+    margin-bottom: 28px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #4ad29a;
+    box-shadow: 0 0 0 4px rgba(74,210,154,0.18);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { transform: scale(1.4); opacity: 0.7; } }
+
+  h1 {
+    font-size: clamp(44px, 6.4vw, 88px);
+    font-weight: 400;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+    margin-bottom: 24px;
+  }
+  h1 .accent {
+    background: linear-gradient(120deg, #8a7fff 0%, #ff9bb3 50%, #6fc7a8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .lede {
+    font-size: clamp(16px, 1.4vw, 19px);
+    color: var(--ink-soft);
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ───── Carousel ───── */
+  .carousel-wrap {
+    position: relative;
+    margin-bottom: 56px;
+  }
+
+  .carousel {
+    position: relative;
+    width: 100%;
+    height: 560px;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow:
+      0 1px 2px rgba(20,20,30,0.04),
+      0 12px 40px rgba(20,20,30,0.06),
+      0 30px 90px rgba(20,20,30,0.08);
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 64px 72px;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 48px;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--slow) var(--ease), visibility 0s linear var(--slow);
+  }
+  .slide.active {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--slow) var(--ease), visibility 0s;
+  }
+
+  /* Slide gradients — pastel, layered */
+  .s1 { background:
+    radial-gradient(circle at 20% 30%, var(--p-rose), transparent 55%),
+    radial-gradient(circle at 80% 70%, var(--p-butter), transparent 55%),
+    linear-gradient(135deg, #fff1ec 0%, #ffe7eb 100%); }
+  .s2 { background:
+    radial-gradient(circle at 80% 20%, var(--p-peach), transparent 55%),
+    radial-gradient(circle at 20% 80%, var(--p-lilac), transparent 55%),
+    linear-gradient(135deg, #fff5ec 0%, #f1ecff 100%); }
+  .s3 { background:
+    radial-gradient(circle at 30% 70%, var(--p-sky), transparent 55%),
+    radial-gradient(circle at 70% 30%, var(--p-mint), transparent 55%),
+    linear-gradient(135deg, #ecf3ff 0%, #ecfff5 100%); }
+  .s4 { background:
+    radial-gradient(circle at 20% 20%, var(--p-butter), transparent 55%),
+    radial-gradient(circle at 80% 80%, var(--p-rose), transparent 55%),
+    linear-gradient(135deg, #fffbe8 0%, #fff0f3 100%); }
+  .s5 { background:
+    radial-gradient(circle at 80% 30%, var(--p-lilac), transparent 55%),
+    radial-gradient(circle at 20% 70%, var(--p-sky), transparent 55%),
+    linear-gradient(135deg, #f3edff 0%, #ecf2ff 100%); }
+  .s6 { background:
+    radial-gradient(circle at 30% 30%, var(--p-mint), transparent 55%),
+    radial-gradient(circle at 70% 70%, var(--p-cream), transparent 55%),
+    linear-gradient(135deg, #ecfdf2 0%, #fff5e8 100%); }
+  .s7 { background:
+    radial-gradient(circle at 80% 20%, var(--p-sage), transparent 55%),
+    radial-gradient(circle at 20% 80%, var(--p-rose), transparent 55%),
+    linear-gradient(135deg, #f1f6e8 0%, #ffeef3 100%); }
+  .s8 { background:
+    radial-gradient(circle at 50% 30%, var(--p-lilac), transparent 60%),
+    radial-gradient(circle at 30% 80%, var(--p-mint), transparent 55%),
+    radial-gradient(circle at 80% 80%, var(--p-peach), transparent 55%),
+    linear-gradient(135deg, #f3eeff 0%, #ecfff5 50%, #fff1e8 100%); }
+
+  /* Slide content */
+  .slide-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-bottom: 28px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity var(--med) var(--ease) 200ms, transform var(--med) var(--ease) 200ms;
+  }
+  .slide-meta .chapter { color: var(--ink); font-weight: 600; }
+  .slide-meta .divider { width: 24px; height: 1px; background: currentColor; opacity: 0.3; }
+
+  .slide-stat {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(80px, 11vw, 168px);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity var(--slow) var(--ease) 250ms, transform var(--slow) var(--ease) 250ms;
+  }
+  .slide-stat .unit {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.32em;
+    font-weight: 500;
+    color: var(--ink-soft);
+    letter-spacing: -0.01em;
+    margin-left: 8px;
+    vertical-align: 0.6em;
+  }
+
+  .slide-headline {
+    font-size: clamp(20px, 1.9vw, 26px);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    color: var(--ink);
+    margin-bottom: 16px;
+    max-width: 460px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity var(--med) var(--ease) 350ms, transform var(--med) var(--ease) 350ms;
+  }
+
+  .slide-body-text {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 480px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity var(--med) var(--ease) 450ms, transform var(--med) var(--ease) 450ms;
+  }
+
+  .slide-source {
+    position: absolute;
+    bottom: 28px;
+    left: 72px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink-mute);
+    opacity: 0;
+    transition: opacity var(--med) var(--ease) 600ms;
+  }
+
+  /* Right column visual */
+  .slide-visual {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.96);
+    transition: opacity var(--slow) var(--ease) 350ms, transform var(--slow) var(--ease) 350ms;
+  }
+
+  .slide.active .slide-meta,
+  .slide.active .slide-stat,
+  .slide.active .slide-headline,
+  .slide.active .slide-body-text,
+  .slide.active .slide-source,
+  .slide.active .slide-visual {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  /* ───── SVG visual styling ───── */
+  .vis {
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .vis circle, .vis rect, .vis path, .vis line {
+    transition: all 1.2s var(--ease);
+  }
+
+  /* Centralized monolith (slide 1, 4) */
+  .monolith {
+    fill: rgba(26,26,31,0.75);
+    transform-origin: center;
+    animation: breathe 4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+
+  /* Heat waves (slide 2) */
+  .heat-wave {
+    fill: none;
+    stroke: rgba(255, 100, 80, 0.45);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+  .slide.active .heat-wave { animation: rise 3s ease-in-out infinite; }
+  @keyframes rise {
+    0%   { transform: translateY(0); opacity: 0; }
+    20%  { opacity: 0.7; }
+    100% { transform: translateY(-40px); opacity: 0; }
+  }
+
+  /* Water drops (slide 3) */
+  .drop {
+    fill: rgba(80, 140, 220, 0.7);
+  }
+  .slide.active .drop { animation: drip 2.5s ease-in infinite; }
+  @keyframes drip {
+    0%   { transform: translateY(-20px); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translateY(80px); opacity: 0; }
+  }
+
+  /* Mesh nodes (slides 5-8) */
+  .mesh-node {
+    fill: var(--ink);
+    transform-origin: center;
+  }
+  .mesh-node-glow {
+    fill: rgba(107, 92, 255, 0.15);
+  }
+  .mesh-link {
+    stroke: rgba(26,26,31,0.25);
+    stroke-width: 1;
+    fill: none;
+    stroke-dasharray: 4 4;
+  }
+  .slide.active .mesh-link {
+    animation: flow 4s linear infinite;
+  }
+  @keyframes flow {
+    to { stroke-dashoffset: -80; }
+  }
+  .slide.active .mesh-node-glow {
+    animation: nodeBreathe 3s ease-in-out infinite;
+  }
+  @keyframes nodeBreathe {
+    50% { transform: scale(1.4); opacity: 0.5; }
+  }
+
+  /* ───── Controls ───── */
+  .carousel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 28px;
+    padding: 0 4px;
+  }
+
+  .progress-rail {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    margin: 0 32px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 2px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+  }
+  .progress-bar .fill {
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  .progress-bar.active .fill {
+    animation: fillBar var(--auto-ms, 7000ms) linear forwards;
+  }
+  .progress-bar.done .fill {
+    transform: scaleX(1);
+  }
+  @keyframes fillBar {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  .ctrl-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    transition: all var(--fast) var(--ease);
+  }
+  .ctrl-btn:hover {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+    transform: scale(1.05);
+  }
+  .ctrl-btn svg { width: 16px; height: 16px; }
+
+  .slide-counter {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    min-width: 46px;
+    text-align: center;
+  }
+  .slide-counter .total { color: var(--ink-mute); }
+
+  .ctrl-group { display: flex; align-items: center; gap: 10px; }
+
+  /* ───── Footer band ───── */
+  .footer-band {
+    margin-top: 100px;
+    padding-top: 40px;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: start;
+  }
+  .footer-band h3 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  .footer-band p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+    max-width: 420px;
+  }
+  .sources {
+    font-size: 12px;
+    color: var(--ink-mute);
+    line-height: 1.7;
+  }
+  .sources strong {
+    color: var(--ink-soft);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .sources a {
+    color: inherit; text-decoration: none;
+    border-bottom: 1px dotted var(--ink-mute);
+  }
+  .sources a:hover { color: var(--ink); }
+
+  /* ───── Responsive ───── */
+  @media (max-width: 860px) {
+    .page { padding: 24px 20px 60px; }
+    nav.top { padding-bottom: 40px; }
+    .nav-links { display: none; }
+    .carousel { height: 640px; }
+    .slide {
+      grid-template-columns: 1fr;
+      padding: 40px 32px;
+      gap: 24px;
+    }
+    .slide-source { left: 32px; bottom: 24px; }
+    .slide-visual { order: -1; max-height: 180px; }
+    .vis { max-width: 180px; }
+    .footer-band { grid-template-columns: 1fr; gap: 32px; }
+    .progress-rail { margin: 0 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <nav class="top">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <span>Mesh<span style="color: var(--ink-mute)">/</span>shift</span>
+    </div>
+    <div class="nav-links">
+      <a href="#story">Story</a>
+      <a href="#data">Data</a>
+      <a href="#sources">Sources</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">
+      <span class="dot"></span>
+      <span>State of compute · 2026</span>
+    </div>
+    <h1>The compute economy is <span class="serif accent">leaving the building.</span></h1>
+    <p class="lede">For two decades we centralized the world's intelligence into a few thousand warehouses. The grid, the water, and the math no longer agree. A quieter, distributed architecture is taking shape.</p>
+  </header>
+
+  <section id="story" class="carousel-wrap">
+    <div class="carousel" id="carousel" aria-roledescription="carousel" aria-label="The shift from data centers to mesh computing">
+
+      <!-- 1 — Setting the stage -->
+      <article class="slide s1 active" data-duration="8000">
+        <div>
+          <div class="slide-meta"><span class="chapter">01</span><span class="divider"></span><span>The footprint</span></div>
+          <div class="slide-stat">415<span class="unit">TWh / 2024</span></div>
+          <h2 class="slide-headline">Data centers now draw more electricity than entire industrialized nations.</h2>
+          <p class="slide-body-text">Global data center consumption hit roughly 1.5% of all electricity on Earth — and demand grew 17% in 2025 alone, more than five times the rate of the wider grid.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1a1a1f" stop-opacity="0.85"/>
+                <stop offset="1" stop-color="#1a1a1f" stop-opacity="0.55"/>
+              </linearGradient>
+            </defs>
+            <rect class="monolith" x="100" y="80" width="160" height="220" rx="6" fill="url(#g1)"/>
+            <g opacity="0.6">
+              <line x1="120" y1="120" x2="240" y2="120" stroke="#fff" stroke-width="0.6"/>
+              <line x1="120" y1="150" x2="240" y2="150" stroke="#fff" stroke-width="0.6"/>
+              <line x1="120" y1="180" x2="240" y2="180" stroke="#fff" stroke-width="0.6"/>
+              <line x1="120" y1="210" x2="240" y2="210" stroke="#fff" stroke-width="0.6"/>
+              <line x1="120" y1="240" x2="240" y2="240" stroke="#fff" stroke-width="0.6"/>
+              <line x1="120" y1="270" x2="240" y2="270" stroke="#fff" stroke-width="0.6"/>
+            </g>
+            <g fill="#7fffb8">
+              <circle cx="135" cy="120" r="2"/><circle cx="135" cy="150" r="2"/>
+              <circle cx="135" cy="180" r="2"/><circle cx="135" cy="210" r="2"/>
+              <circle cx="135" cy="240" r="2"/><circle cx="135" cy="270" r="2"/>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — IEA, World Energy Outlook 2026</div>
+      </article>
+
+      <!-- 2 — Heat / power surge -->
+      <article class="slide s2" data-duration="8000">
+        <div>
+          <div class="slide-meta"><span class="chapter">02</span><span class="divider"></span><span>The trajectory</span></div>
+          <div class="slide-stat">945<span class="unit">TWh by 2030</span></div>
+          <h2 class="slide-headline">Demand is forecast to more than double in five years.</h2>
+          <p class="slide-body-text">The U.S. and China alone account for nearly 80% of the increase. AI workloads — currently a sliver of total load — will drive almost half of that growth.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <g transform="translate(180,260)">
+              <rect x="-70" y="-110" width="140" height="120" rx="4" fill="#1a1a1f" opacity="0.8"/>
+              <g class="heat-wave">
+                <path d="M -50 -120 Q -40 -135 -30 -120 T -10 -120 T 10 -120 T 30 -120 T 50 -120"/>
+              </g>
+              <g class="heat-wave" style="animation-delay: 0.6s">
+                <path d="M -50 -130 Q -40 -145 -30 -130 T -10 -130 T 10 -130 T 30 -130 T 50 -130"/>
+              </g>
+              <g class="heat-wave" style="animation-delay: 1.2s">
+                <path d="M -50 -140 Q -40 -155 -30 -140 T -10 -140 T 10 -140 T 30 -140 T 50 -140"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — IEA Energy & AI Report, 2026</div>
+      </article>
+
+      <!-- 3 — Water -->
+      <article class="slide s3" data-duration="8000">
+        <div>
+          <div class="slide-meta"><span class="chapter">03</span><span class="divider"></span><span>The hidden cost</span></div>
+          <div class="slide-stat">1<span class="unit">trillion liters of water · 2025</span></div>
+          <h2 class="slide-headline">North American data centers drank a small sea last year.</h2>
+          <p class="slide-body-text">A single hyperscale facility can evaporate 5 million gallons a day — the daily water of a 50,000-person city — purely to keep silicon below thermal throttle.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <g transform="translate(180,180)">
+              <circle r="80" fill="none" stroke="#1a1a1f" stroke-width="1" opacity="0.2"/>
+              <circle r="60" fill="none" stroke="#1a1a1f" stroke-width="1" opacity="0.3"/>
+              <circle r="40" fill="none" stroke="#1a1a1f" stroke-width="1" opacity="0.4"/>
+              <g>
+                <ellipse class="drop" cx="-40" cy="-100" rx="5" ry="8" style="animation-delay: 0s"/>
+                <ellipse class="drop" cx="-15" cy="-100" rx="5" ry="8" style="animation-delay: 0.4s"/>
+                <ellipse class="drop" cx="10" cy="-100" rx="5" ry="8" style="animation-delay: 0.8s"/>
+                <ellipse class="drop" cx="35" cy="-100" rx="5" ry="8" style="animation-delay: 1.2s"/>
+                <ellipse class="drop" cx="-25" cy="-100" rx="5" ry="8" style="animation-delay: 1.6s"/>
+                <ellipse class="drop" cx="25" cy="-100" rx="5" ry="8" style="animation-delay: 2.0s"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — Reuters / Lincoln Institute, 2026</div>
+      </article>
+
+      <!-- 4 — Capex -->
+      <article class="slide s4" data-duration="8000">
+        <div>
+          <div class="slide-meta"><span class="chapter">04</span><span class="divider"></span><span>The capital wave</span></div>
+          <div class="slide-stat">$700B<span class="unit">hyperscaler capex · 2026</span></div>
+          <h2 class="slide-headline">Four companies will spend more on compute this year than the GDP of Switzerland.</h2>
+          <p class="slide-body-text">Amazon, Google, Meta and Microsoft are pouring nearly three-quarters of a trillion dollars into AI infrastructure — almost double 2025 — while free cash flow contracts.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <g transform="translate(40,300)">
+              <rect x="0"   y="-60"  width="50" height="60"  fill="#1a1a1f" opacity="0.4"/>
+              <rect x="70"  y="-110" width="50" height="110" fill="#1a1a1f" opacity="0.55"/>
+              <rect x="140" y="-180" width="50" height="180" fill="#1a1a1f" opacity="0.7"/>
+              <rect x="210" y="-260" width="50" height="260" fill="#1a1a1f" opacity="0.92"/>
+              <line x1="-5" y1="0" x2="285" y2="0" stroke="#1a1a1f" stroke-width="1"/>
+              <text x="25"  y="20" text-anchor="middle" font-size="10" fill="#4a4a55">'23</text>
+              <text x="95"  y="20" text-anchor="middle" font-size="10" fill="#4a4a55">'24</text>
+              <text x="165" y="20" text-anchor="middle" font-size="10" fill="#4a4a55">'25</text>
+              <text x="235" y="20" text-anchor="middle" font-size="10" fill="#4a4a55" font-weight="600">'26</text>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — Axios / CNBC capex tracking, Feb 2026</div>
+      </article>
+
+      <!-- 5 — Concentration / fragility -->
+      <article class="slide s5" data-duration="8000">
+        <div>
+          <div class="slide-meta"><span class="chapter">05</span><span class="divider"></span><span>The friction</span></div>
+          <div class="slide-stat">20<span class="unit">% of Ireland's grid</span></div>
+          <h2 class="slide-headline">A handful of buildings are bending entire national grids.</h2>
+          <p class="slide-body-text">Data centers consume more than a fifth of Ireland's electricity. Northern Virginia and parts of Texas face moratoria. The centralized model has hit physical limits — land, power, permits, water.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <g transform="translate(180,180)">
+              <circle r="120" fill="none" stroke="#1a1a1f" stroke-width="0.8" opacity="0.3"/>
+              <g opacity="0.85">
+                <path d="M -80 -40 L 80 -40 L 80 40 L -80 40 Z" fill="none" stroke="#1a1a1f" stroke-width="0.7"/>
+                <path d="M -80 -40 L 80 -40 L 80 40 L -80 40 Z" fill="#1a1a1f" opacity="0.78" transform="scale(0.42)"/>
+              </g>
+              <text x="0" y="6" text-anchor="middle" font-size="12" fill="#fff" font-weight="500">20%</text>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — EirGrid; IEA regional impact analysis</div>
+      </article>
+
+      <!-- 6 — The shift begins -->
+      <article class="slide s6" data-duration="9000">
+        <div>
+          <div class="slide-meta"><span class="chapter">06</span><span class="divider"></span><span>The pivot</span></div>
+          <div class="slide-stat">650+<span class="unit">live mesh networks</span></div>
+          <h2 class="slide-headline">Compute is decentralizing into a planetary mesh.</h2>
+          <p class="slide-body-text">Decentralized Physical Infrastructure Networks — DePIN — now run more than 650 production systems. GPU rendering, storage, wireless, inference — coordinated by protocols, not perimeters.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <g transform="translate(180,180)">
+              <line class="mesh-link" x1="0" y1="0" x2="-100" y2="-60"/>
+              <line class="mesh-link" x1="0" y1="0" x2="100" y2="-60"/>
+              <line class="mesh-link" x1="0" y1="0" x2="-100" y2="60"/>
+              <line class="mesh-link" x1="0" y1="0" x2="100" y2="60"/>
+              <line class="mesh-link" x1="0" y1="0" x2="0" y2="-110"/>
+              <line class="mesh-link" x1="0" y1="0" x2="0" y2="110"/>
+              <line class="mesh-link" x1="-100" y1="-60" x2="100" y2="-60"/>
+              <line class="mesh-link" x1="-100" y1="60" x2="100" y2="60"/>
+              <line class="mesh-link" x1="-100" y1="-60" x2="-100" y2="60"/>
+              <line class="mesh-link" x1="100" y1="-60" x2="100" y2="60"/>
+
+              <g><circle class="mesh-node-glow" cx="0" cy="0" r="14"/><circle class="mesh-node" cx="0" cy="0" r="7"/></g>
+              <g><circle class="mesh-node-glow" cx="-100" cy="-60" r="11"/><circle class="mesh-node" cx="-100" cy="-60" r="5"/></g>
+              <g><circle class="mesh-node-glow" cx="100" cy="-60" r="11"/><circle class="mesh-node" cx="100" cy="-60" r="5"/></g>
+              <g><circle class="mesh-node-glow" cx="-100" cy="60" r="11"/><circle class="mesh-node" cx="-100" cy="60" r="5"/></g>
+              <g><circle class="mesh-node-glow" cx="100" cy="60" r="11"/><circle class="mesh-node" cx="100" cy="60" r="5"/></g>
+              <g><circle class="mesh-node-glow" cx="0" cy="-110" r="11"/><circle class="mesh-node" cx="0" cy="-110" r="5"/></g>
+              <g><circle class="mesh-node-glow" cx="0" cy="110" r="11"/><circle class="mesh-node" cx="0" cy="110" r="5"/></g>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — Messari DePIN tracker, Q1 2026</div>
+      </article>
+
+      <!-- 7 — Edge growth -->
+      <article class="slide s7" data-duration="9000">
+        <div>
+          <div class="slide-meta"><span class="chapter">07</span><span class="divider"></span><span>The new market</span></div>
+          <div class="slide-stat">14×<span class="unit">edge market by 2034</span></div>
+          <h2 class="slide-headline">Edge and distributed compute are scaling faster than any cloud category in history.</h2>
+          <p class="slide-body-text">From $21B in 2025 toward an estimated $264B–$1.5T by mid-decade. By 2027 nearly 60% of organizations will run hybrid edge architectures by default.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <g transform="translate(40,300)">
+              <path d="M 0 -10 Q 80 -30 160 -90 T 280 -240" fill="none" stroke="#1a1a1f" stroke-width="2" stroke-linecap="round"/>
+              <line x1="-5" y1="0" x2="285" y2="0" stroke="#1a1a1f" stroke-width="1"/>
+              <line x1="-5" y1="0" x2="-5" y2="-260" stroke="#1a1a1f" stroke-width="1"/>
+              <circle cx="0"   cy="-10"  r="3" fill="#1a1a1f"/>
+              <circle cx="80"  cy="-30"  r="3" fill="#1a1a1f"/>
+              <circle cx="160" cy="-90"  r="3" fill="#1a1a1f"/>
+              <circle cx="280" cy="-240" r="6" fill="#6b5cff"/>
+              <text x="0"   y="20" text-anchor="middle" font-size="10" fill="#4a4a55">'24</text>
+              <text x="80"  y="20" text-anchor="middle" font-size="10" fill="#4a4a55">'26</text>
+              <text x="160" y="20" text-anchor="middle" font-size="10" fill="#4a4a55">'29</text>
+              <text x="280" y="20" text-anchor="middle" font-size="10" fill="#4a4a55" font-weight="600">'34</text>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — Fortune Business Insights · GMI · Roots Analysis</div>
+      </article>
+
+      <!-- 8 — Future / synthesis -->
+      <article class="slide s8" data-duration="10000">
+        <div>
+          <div class="slide-meta"><span class="chapter">08</span><span class="divider"></span><span>The shift</span></div>
+          <div class="slide-stat serif">A quieter <em style="font-style: italic">grid.</em></div>
+          <h2 class="slide-headline">From a few hundred warehouses — to billions of nodes.</h2>
+          <p class="slide-body-text">The next decade of computing won't be built in deserts and cooled with aquifers. It will live inside laptops, base stations, GPUs at the edge, and homes wired into a coordinated mesh. Cheaper, cooler, more resilient — and closer to the people it serves.</p>
+        </div>
+        <div class="slide-visual">
+          <svg class="vis" viewBox="0 0 360 360" aria-hidden="true">
+            <g transform="translate(180,180)">
+              <g opacity="0.5">
+                <line class="mesh-link" x1="-130" y1="-90" x2="-50" y2="-30"/>
+                <line class="mesh-link" x1="130"  y1="-90" x2="50"  y2="-30"/>
+                <line class="mesh-link" x1="-130" y1="90"  x2="-50" y2="30"/>
+                <line class="mesh-link" x1="130"  y1="90"  x2="50"  y2="30"/>
+                <line class="mesh-link" x1="-50"  y1="-30" x2="50"  y2="-30"/>
+                <line class="mesh-link" x1="-50"  y1="30"  x2="50"  y2="30"/>
+                <line class="mesh-link" x1="-50"  y1="-30" x2="-50" y2="30"/>
+                <line class="mesh-link" x1="50"   y1="-30" x2="50"  y2="30"/>
+                <line class="mesh-link" x1="-50"  y1="-30" x2="50"  y2="30"/>
+                <line class="mesh-link" x1="50"   y1="-30" x2="-50" y2="30"/>
+                <line class="mesh-link" x1="0" y1="-130" x2="0" y2="130"/>
+                <line class="mesh-link" x1="-130" y1="0" x2="130" y2="0"/>
+              </g>
+              <g>
+                <circle class="mesh-node-glow" cx="-130" cy="-90" r="9"/><circle class="mesh-node" cx="-130" cy="-90" r="4"/>
+                <circle class="mesh-node-glow" cx="130"  cy="-90" r="9"/><circle class="mesh-node" cx="130" cy="-90" r="4"/>
+                <circle class="mesh-node-glow" cx="-130" cy="90" r="9"/><circle class="mesh-node" cx="-130" cy="90" r="4"/>
+                <circle class="mesh-node-glow" cx="130"  cy="90" r="9"/><circle class="mesh-node" cx="130" cy="90" r="4"/>
+                <circle class="mesh-node-glow" cx="0" cy="-130" r="9"/><circle class="mesh-node" cx="0" cy="-130" r="4"/>
+                <circle class="mesh-node-glow" cx="0" cy="130" r="9"/><circle class="mesh-node" cx="0" cy="130" r="4"/>
+                <circle class="mesh-node-glow" cx="-130" cy="0" r="9"/><circle class="mesh-node" cx="-130" cy="0" r="4"/>
+                <circle class="mesh-node-glow" cx="130" cy="0" r="9"/><circle class="mesh-node" cx="130" cy="0" r="4"/>
+                <circle class="mesh-node-glow" cx="-50" cy="-30" r="11"/><circle class="mesh-node" cx="-50" cy="-30" r="5"/>
+                <circle class="mesh-node-glow" cx="50"  cy="-30" r="11"/><circle class="mesh-node" cx="50" cy="-30" r="5"/>
+                <circle class="mesh-node-glow" cx="-50" cy="30"  r="11"/><circle class="mesh-node" cx="-50" cy="30" r="5"/>
+                <circle class="mesh-node-glow" cx="50"  cy="30"  r="11"/><circle class="mesh-node" cx="50" cy="30" r="5"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="slide-source">SOURCE — Synthesis · IEA · Messari · Reuters · Brookings</div>
+      </article>
+
+    </div>
+
+    <div class="carousel-controls">
+      <div class="ctrl-group">
+        <button class="ctrl-btn" id="prev" aria-label="Previous slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18 9 12l6-6"/></svg>
+        </button>
+        <button class="ctrl-btn" id="play" aria-label="Pause autoplay">
+          <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        </button>
+        <button class="ctrl-btn" id="next" aria-label="Next slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+      <div class="progress-rail" id="progress-rail"></div>
+      <div class="slide-counter"><span id="cur">01</span><span class="total"> / 08</span></div>
+    </div>
+  </section>
+
+  <section id="data" class="footer-band">
+    <div>
+      <h3>The macro picture, in one line.</h3>
+      <p>We're spending three-quarters of a trillion dollars per year to centralize what physics, water, and the grid are quietly forcing back to the edge.</p>
+    </div>
+    <div id="sources" class="sources">
+      <strong>Sources</strong>
+      <a href="https://www.iea.org/news/data-centre-electricity-use-surged-in-2025-even-with-tightening-bottlenecks-driving-a-scramble-for-solutions" target="_blank">IEA — Data Centre Electricity 2025</a> ·
+      <a href="https://www.iea.org/reports/energy-and-ai/energy-demand-from-ai" target="_blank">IEA — Energy & AI 2026</a> ·
+      <a href="https://www.brookings.edu/articles/global-energy-demands-within-the-ai-regulatory-landscape/" target="_blank">Brookings</a> ·
+      <a href="https://www.reuters.com/sustainability/boards-policy-regulation/investors-press-amazon-microsoft-google-water-power-use-us-data-centers-2026-04-06/" target="_blank">Reuters — Water Disclosure</a> ·
+      <a href="https://www.lincolninst.edu/publications/land-lines-magazine/articles/land-water-impacts-data-centers/" target="_blank">Lincoln Institute</a> ·
+      <a href="https://www.axios.com/2026/02/11/hyperscaler-spending-meta-microsoft-amazon-google" target="_blank">Axios — Hyperscaler Capex</a> ·
+      <a href="https://www.kucoin.com/blog/en-depin-crypto-sector-2026-how-decentralized-physical-infrastructure-surpassed-oracles" target="_blank">DePIN Sector Report 2026</a> ·
+      <a href="https://www.fortunebusinessinsights.com/edge-computing-market-103760" target="_blank">Fortune Business Insights</a>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(() => {
+  const carousel = document.getElementById('carousel');
+  const slides = Array.from(carousel.querySelectorAll('.slide'));
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const playBtn = document.getElementById('play');
+  const playIcon = document.getElementById('play-icon');
+  const rail = document.getElementById('progress-rail');
+  const curEl = document.getElementById('cur');
+  const total = slides.length;
+
+  let index = 0;
+  let playing = true;
+  let timer = null;
+
+  // Build progress bars
+  const bars = slides.map((s, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'progress-bar';
+    bar.innerHTML = '<div class="fill"></div>';
+    bar.addEventListener('click', () => goTo(i));
+    rail.appendChild(bar);
+    return bar;
+  });
+
+  function pad(n) { return String(n + 1).padStart(2, '0'); }
+
+  function setActive(i) {
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    bars.forEach((b, k) => {
+      b.classList.remove('active', 'done');
+      if (k < i) b.classList.add('done');
+    });
+    curEl.textContent = pad(i);
+  }
+
+  function startBar(i) {
+    const bar = bars[i];
+    const dur = parseInt(slides[i].dataset.duration, 10) || 7000;
+    bar.style.setProperty('--auto-ms', dur + 'ms');
+    // restart animation
+    bar.classList.remove('active');
+    void bar.offsetWidth;
+    bar.classList.add('active');
+    return dur;
+  }
+
+  function scheduleNext(dur) {
+    clearTimeout(timer);
+    if (!playing) return;
+    timer = setTimeout(() => goTo((index + 1) % total), dur);
+  }
+
+  function goTo(i) {
+    index = (i + total) % total;
+    setActive(index);
+    if (playing) {
+      const dur = startBar(index);
+      scheduleNext(dur);
+    } else {
+      bars[index].classList.remove('active');
+    }
+  }
+
+  function togglePlay() {
+    playing = !playing;
+    if (playing) {
+      playIcon.innerHTML = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
+      playBtn.setAttribute('aria-label', 'Pause autoplay');
+      const dur = startBar(index);
+      scheduleNext(dur);
+    } else {
+      playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+      playBtn.setAttribute('aria-label', 'Play autoplay');
+      clearTimeout(timer);
+      bars[index].classList.remove('active');
+    }
+  }
+
+  prevBtn.addEventListener('click', () => goTo(index - 1));
+  nextBtn.addEventListener('click', () => goTo(index + 1));
+  playBtn.addEventListener('click', togglePlay);
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') goTo(index + 1);
+    if (e.key === 'ArrowLeft')  goTo(index - 1);
+    if (e.key === ' ')          { e.preventDefault(); togglePlay(); }
+  });
+
+  // Pause on hover
+  carousel.addEventListener('mouseenter', () => {
+    if (playing) {
+      clearTimeout(timer);
+      bars[index].style.animationPlayState = 'paused';
+      const fill = bars[index].querySelector('.fill');
+      const cs = getComputedStyle(fill);
+      fill.style.animationPlayState = 'paused';
+    }
+  });
+  carousel.addEventListener('mouseleave', () => {
+    if (playing) {
+      const fill = bars[index].querySelector('.fill');
+      fill.style.animationPlayState = 'running';
+      // Roughly resume — re-schedule remaining time
+      const dur = parseInt(slides[index].dataset.duration, 10) || 7000;
+      // Simple approach: restart current bar
+      const newDur = startBar(index);
+      scheduleNext(newDur);
+    }
+  });
+
+  // Touch / swipe
+  let touchStartX = 0;
+  carousel.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  carousel.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) goTo(index + (dx < 0 ? 1 : -1));
+  });
+
+  // Initialize
+  goTo(0);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PETCODE — Agent companions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0a0a0a;
+      --paper: #ffffff;
+      --fog: #f4f4f4;
+      --line: #0a0a0a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: clamp(15px, 1.1vw, 18px); }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-weight: 400;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: clamp(3rem, 8vw, 6rem) clamp(1.25rem, 4vw, 3rem) clamp(5rem, 12vw, 10rem);
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: clamp(4rem, 12vw, 8rem);
+      border-bottom: 2px solid var(--line);
+    }
+
+    .logo {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      display: flex;
+      gap: 1.75rem;
+    }
+    .nav a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+    .nav a:hover { border-bottom-color: var(--ink); }
+
+    .hero {
+      padding-top: clamp(4rem, 14vw, 9rem);
+      padding-bottom: clamp(5rem, 16vw, 10rem);
+    }
+
+    .hero h1 {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: clamp(2.5rem, 8vw, 5.5rem);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      max-width: 14ch;
+    }
+
+    .hero .lede {
+      margin-top: clamp(2rem, 5vw, 3.5rem);
+      max-width: 36rem;
+      font-size: 0.95rem;
+      color: var(--ink);
+      opacity: 0.88;
+    }
+
+    .hero .cta-row {
+      margin-top: clamp(2.5rem, 6vw, 4rem);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: inherit;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 1rem 1.5rem;
+      border: 2px solid var(--line);
+      background: var(--ink);
+      color: var(--paper);
+      cursor: pointer;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .pets-section {
+      padding-top: clamp(3rem, 8vw, 5rem);
+    }
+
+    .pets-section h2 {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: clamp(1.25rem, 3vw, 1.75rem);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .pets-section .sub {
+      font-size: 0.8rem;
+      opacity: 0.75;
+      max-width: 28rem;
+      margin-bottom: clamp(3rem, 8vw, 5rem);
+    }
+
+    .pet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: clamp(2.5rem, 6vw, 4rem);
+      align-items: start;
+    }
+
+    .pet-card {
+      border: 2px solid var(--line);
+      background: var(--paper);
+      padding: clamp(1.5rem, 4vw, 2.25rem);
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .pet-card canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width: 128px;
+      height: 128px;
+    }
+
+    .pet-card .name {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .pet-card .role {
+      font-size: 0.7rem;
+      opacity: 0.65;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .strip {
+      margin-top: clamp(6rem, 18vw, 12rem);
+      padding: clamp(2rem, 5vw, 3rem);
+      background: var(--fog);
+      border: 2px solid var(--line);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    footer {
+      margin-top: clamp(4rem, 10vw, 7rem);
+      padding-top: 2rem;
+      border-top: 2px solid var(--line);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.55;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="logo">PETCODE</span>
+      <nav class="nav" aria-label="Primary">
+        <a href="#pets">Companions</a>
+        <a href="#">Docs</a>
+        <a href="#">Waitlist</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Your agent leaves crumbs. They eat them.</h1>
+      <p class="lede">
+        Tiny pixel companions sync to your coding agent: commits, tests, merges. Retro loops, no noise — just
+        black, white, and the dopamine of a job well fed.
+      </p>
+      <div class="cta-row">
+        <button type="button" class="btn">Join waitlist</button>
+        <button type="button" class="btn btn-ghost">How it works</button>
+      </div>
+    </section>
+
+    <section class="pets-section" id="pets">
+      <h2>Four states. Four friends.</h2>
+      <p class="sub">Each device reads your pipeline and animates in its own silly way. Monochrome only. Batteries not included.</p>
+      <div class="pet-grid">
+        <article class="pet-card">
+          <canvas id="pet0" width="32" height="32" aria-hidden="true"></canvas>
+          <span class="name">BYTE</span>
+          <p class="role">Bounces on every successful build.</p>
+        </article>
+        <article class="pet-card">
+          <canvas id="pet1" width="32" height="32" aria-hidden="true"></canvas>
+          <span class="name">PATCH</span>
+          <p class="role">Wiggles when diff size spikes.</p>
+        </article>
+        <article class="pet-card">
+          <canvas id="pet2" width="32" height="32" aria-hidden="true"></canvas>
+          <span class="name">MERGE</span>
+          <p class="role">Spins on green CI. Dizzy on purpose.</p>
+        </article>
+        <article class="pet-card">
+          <canvas id="pet3" width="32" height="32" aria-hidden="true"></canvas>
+          <span class="name">NULL</span>
+          <p class="role">Naps between tasks. Wakes on deploy.</p>
+        </article>
+      </div>
+    </section>
+
+    <p class="strip">Agent progress → events → sprite frames. No accounts required for the demo loop above.</p>
+
+    <footer>
+      <span>© PETCODE</span>
+      <span>Pixel brutalism since 2026</span>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const W = 32;
+      const H = 32;
+
+      /** 22×14 egg shell, drawn at (ox,oy) — LCD inset y+5 */
+      function drawShell(ctx, ox, oy) {
+        ctx.fillStyle = "#0a0a0a";
+        const rows = [
+          "      ########      ",
+          "    ##        ##    ",
+          "   #            #   ",
+          "  #              #  ",
+          " #                # ",
+          " #                # ",
+          " #                # ",
+          " #                # ",
+          " #                # ",
+          "  #              #  ",
+          "   #            #   ",
+          "    ##        ##    ",
+          "      ########      ",
+        ];
+        for (let y = 0; y < rows.length; y++) {
+          const row = rows[y];
+          for (let x = 0; x < row.length; x++) {
+            if (row[x] === "#") ctx.fillRect(ox + x, oy + y, 1, 1);
+          }
+        }
+      }
+
+      function drawFace(ctx, ox, oy, blink, mouth) {
+        const fy = oy + 5;
+        ctx.fillStyle = "#0a0a0a";
+        if (!blink) {
+          ctx.fillRect(ox + 10, fy + 3, 2, 2);
+          ctx.fillRect(ox + 16, fy + 3, 2, 2);
+        } else {
+          ctx.fillRect(ox + 10, fy + 4, 2, 1);
+          ctx.fillRect(ox + 16, fy + 4, 2, 1);
+        }
+        if (mouth === "o") {
+          ctx.fillRect(ox + 12, fy + 7, 4, 3);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(ox + 13, fy + 8, 2, 1);
+          ctx.fillStyle = "#0a0a0a";
+        } else if (mouth === "line") {
+          ctx.fillRect(ox + 11, fy + 8, 6, 1);
+        } else if (mouth === "happy") {
+          ctx.fillRect(ox + 11, fy + 8, 1, 1);
+          ctx.fillRect(ox + 16, fy + 8, 1, 1);
+          ctx.fillRect(ox + 12, fy + 9, 4, 1);
+        }
+      }
+
+      function clear(ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#0a0a0a";
+      }
+
+      function setupPet(id, tick) {
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        let t = 0;
+
+        function frame() {
+          t += 1;
+          clear(ctx);
+          tick(ctx, t);
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+
+      const ox0 = 5;
+      setupPet("pet0", (ctx, t) => {
+        const bounce = Math.round(Math.sin(t * 0.14) * 2);
+        const oy = 3 + bounce;
+        drawShell(ctx, ox0, oy);
+        const blink = Math.sin(t * 0.09) > 0.9;
+        drawFace(ctx, ox0, oy, blink, "happy");
+        ctx.fillStyle = "#0a0a0a";
+        const leg = Math.sin(t * 0.14) > 0 ? 1 : 0;
+        ctx.fillRect(ox0 + 6 + leg, oy + 18, 3, 2);
+        ctx.fillRect(ox0 + 15 - leg, oy + 18, 3, 2);
+      });
+
+      setupPet("pet1", (ctx, t) => {
+        const squash = 1 + Math.sin(t * 0.22) * 0.06;
+        const wobble = Math.sin(t * 0.19) * 1.5;
+        ctx.save();
+        ctx.translate(16 + wobble, 17);
+        ctx.scale(squash, 2 - squash);
+        ctx.translate(-16, -17);
+        drawShell(ctx, ox0, 3);
+        const blink = (t >> 2) % 31 < 2;
+        drawFace(ctx, ox0, 3, blink, "o");
+        ctx.fillStyle = "#0a0a0a";
+        ctx.fillRect(ox0 + 8, 3 + 19, 2, 2);
+        ctx.fillRect(ox0 + 16, 3 + 19, 2, 2);
+        ctx.restore();
+      });
+
+      setupPet("pet2", (ctx, t) => {
+        const spin = t * 0.055;
+        ctx.save();
+        ctx.translate(16, 16);
+        ctx.rotate(spin);
+        ctx.translate(-16, -16);
+        drawShell(ctx, ox0, 3);
+        drawFace(ctx, ox0, 3, false, "line");
+        ctx.fillStyle = "#0a0a0a";
+        ctx.fillRect(ox0 + 7, 3 + 18, 2, 3);
+        ctx.fillRect(ox0 + 17, 3 + 18, 2, 3);
+        ctx.restore();
+        ctx.fillStyle = "#0a0a0a";
+        if ((t >> 2) % 9 < 2) {
+          ctx.fillRect(2 + ((t >> 1) % 5), 3, 1, 1);
+          ctx.fillRect(25 - ((t >> 2) % 4), 4, 1, 1);
+        }
+      });
+
+      setupPet("pet3", (ctx, t) => {
+        const phase = Math.sin(t * 0.035);
+        const sleep = phase > 0.25;
+        const oy = sleep ? 4 : 3;
+        drawShell(ctx, ox0, oy);
+        ctx.fillStyle = "#0a0a0a";
+        if (sleep) {
+          ctx.fillRect(ox0 + 9, oy + 8, 4, 1);
+          ctx.fillRect(ox0 + 15, oy + 8, 4, 1);
+          ctx.fillRect(ox0 + 12, oy + 13, 4, 1);
+          const zz = (t >> 4) % 3;
+          ctx.fillRect(ox0 + 17 + zz, oy + 1, 2, 1);
+          ctx.fillRect(ox0 + 19 + zz, oy, 2, 1);
+        } else {
+          drawFace(ctx, ox0, oy, false, "happy");
+          ctx.fillRect(ox0 + 7, oy + 18, 2, 2);
+          ctx.fillRect(ox0 + 17, oy + 18, 2, 2);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
