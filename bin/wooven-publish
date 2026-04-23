@@ -185,6 +185,35 @@ FILE_COUNT="${#FILES[@]}"
 
 echo "$(c_dim " ") $FILE_COUNT files, $TOTAL_BYTES bytes"
 
+# Warn if no index.html at root — site root will return 404 (only individual
+# files reachable via their full path). Suggest a rename when there's a single
+# .html candidate.
+HAS_INDEX=0
+ROOT_HTML=""
+ROOT_HTML_COUNT=0
+for entry in "${FILES[@]}"; do
+  rel="${entry%|*}"
+  if [[ "$rel" == "index.html" ]]; then
+    HAS_INDEX=1
+    break
+  fi
+  case "$rel" in
+    */*) ;;                                 # nested file, ignore
+    *.html|*.htm)
+      ROOT_HTML="$rel"
+      ROOT_HTML_COUNT=$((ROOT_HTML_COUNT + 1))
+      ;;
+  esac
+done
+if [[ "$HAS_INDEX" -eq 0 ]]; then
+  echo "$(c_yellow " warn:") no index.html at folder root"
+  if [[ "$ROOT_HTML_COUNT" -eq 1 ]]; then
+    echo "$(c_dim "        site root will 404 — rename '$ROOT_HTML' to 'index.html' to fix")"
+  else
+    echo "$(c_dim "        site root will 404 — only files reachable at https://{slug}.wooven.dev/<path>")"
+  fi
+fi
+
 # ────────── 2. POST /v1/publish (or load existing claim) ──────────
 
 CLAIM_TOKEN=""

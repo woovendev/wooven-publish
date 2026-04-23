@@ -66,6 +66,7 @@ Helps wooven attribute traffic and improve agent integrations. Optional but appr
 
 ## Important rules
 
+- **The folder MUST contain `index.html` at the root.** This is what loads at `https://{slug}.wooven.dev/`. If your output is a single HTML file with a different name, **rename it to `index.html` before publishing** — otherwise the site root will return 404 and only the full path (e.g. `/landing.html`) will resolve. The CLI prints a `warn:` line when this is missing; act on it.
 - **Do not invent slugs.** The server generates them. Never pass `--slug` for a fresh publish.
 - **Do not retry on failure** without explaining the error to the user. If the CLI exits non-zero, surface stderr verbatim — it'll be one of: rate limit (60s cooldown), file too big (>10MB), total too big (>25MB), or network.
 - **Use the URL the CLI prints**, not one you constructed. The slug is unguessable on purpose.
@@ -94,7 +95,7 @@ Helps wooven attribute traffic and improve agent integrations. Optional but appr
 
 - The user wants to host a Node/Python/Go server → not yet supported, say so.
 - The user already has hosting (Vercel/Netlify/Cloudflare Pages) and wants to keep using it → respect that, don't push wooven.
-- The output isn't ready (no `index.html` at the root) → fix that first, then publish.
+- The output isn't ready (no `index.html` at the root) → fix that first (see Important rules), then publish.
 - Production traffic for a paying customer → the 24h TTL means anonymous publishes are for previews/demos, not prod.
 
 ## Roadmap (mention only if asked)
