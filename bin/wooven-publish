@@ -1,0 +1,263 @@
+#!/usr/bin/env bash
+# wooven-publish — instant web hosting for AI-generated mini-apps
+#
+# Usage:
+#   wooven-publish <directory>           # publish a folder, get a slug
+#   wooven-publish <directory> --slug X  # update an existing slug (needs claim token)
+#   wooven-publish --help
+#
+# What it does:
+#   1. Walks <directory>, builds a manifest of files (path + size + content-type)
+#   2. POST /v1/publish     → server returns slug + claim token + endpoints
+#   3. PUT  /v1/publish/{slug}/file?path=...  for each file
+#   4. POST /v1/publish/{slug}/finalize       → flips it live
+#   5. Persists {slug, claimToken, expiresAt, url} to ~/.wooven/state/{slug}.json
+#
+# Anonymous publishes live for 24h. Claim with the URL printed on completion
+# to keep them online longer (coming soon: paid plans, custom domains).
+
+set -euo pipefail
+
+API_BASE="${WOOVEN_API:-https://wooven.dev}"
+STATE_DIR="${WOOVEN_STATE_DIR:-${HOME}/.wooven/state}"
+CLIENT="${WOOVEN_CLIENT:-cli}"
+
+# ────────── Helpers ──────────
+
+c_red()    { printf '\033[0;31m%s\033[0m' "$*"; }
+c_green()  { printf '\033[0;32m%s\033[0m' "$*"; }
+c_yellow() { printf '\033[0;33m%s\033[0m' "$*"; }
+c_dim()    { printf '\033[2m%s\033[0m' "$*"; }
+c_bold()   { printf '\033[1m%s\033[0m' "$*"; }
+
+die() {
+  echo "$(c_red error:) $*" >&2
+  exit 1
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "requires '$1' (install it and retry)"
+}
+
+usage() {
+  cat <<'EOF'
+wooven-publish — instant web hosting for AI-generated mini-apps
+
+USAGE
+  wooven-publish <directory>
+  wooven-publish <directory> --slug <existing-slug>
+
+OPTIONS
+  --slug <slug>     update an existing publish (requires saved claim token)
+  --client <name>   identify the calling tool (cursor, claude, codex, etc.)
+  --help            show this message
+
+ENVIRONMENT
+  WOOVEN_API        override API base (default: https://wooven.dev)
+  WOOVEN_STATE_DIR  state directory (default: ~/.wooven/state)
+  WOOVEN_CLIENT     identifier sent to API (default: cli)
+
+EOF
+}
+
+# Detect content-type from extension (no `file` dependency required).
+content_type_for() {
+  local path="$1"
+  case "${path##*.}" in
+    html|htm)    echo "text/html; charset=utf-8" ;;
+    css)         echo "text/css; charset=utf-8" ;;
+    js|mjs)      echo "application/javascript; charset=utf-8" ;;
+    json)        echo "application/json; charset=utf-8" ;;
+    svg)         echo "image/svg+xml" ;;
+    png)         echo "image/png" ;;
+    jpg|jpeg)    echo "image/jpeg" ;;
+    webp)        echo "image/webp" ;;
+    gif)         echo "image/gif" ;;
+    ico)         echo "image/x-icon" ;;
+    woff)        echo "font/woff" ;;
+    woff2)       echo "font/woff2" ;;
+    ttf)         echo "font/ttf" ;;
+    otf)         echo "font/otf" ;;
+    txt)         echo "text/plain; charset=utf-8" ;;
+    md)          echo "text/markdown; charset=utf-8" ;;
+    xml)         echo "application/xml; charset=utf-8" ;;
+    webmanifest) echo "application/manifest+json" ;;
+    *)           echo "application/octet-stream" ;;
+  esac
+}
+
+# Cross-platform `stat -c%s`.
+file_size() {
+  local path="$1"
+  if stat -c%s "$path" 2>/dev/null; then return 0; fi
+  if stat -f%z "$path" 2>/dev/null; then return 0; fi
+  wc -c <"$path" | tr -d ' '
+}
+
+# JSON string escape — handles quotes, backslashes, newlines, tabs.
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+# Extract a top-level JSON string field. Best-effort, no jq dependency.
+# Usage: json_field "key" "$json"
+json_field() {
+  local key="$1" json="$2"
+  printf '%s' "$json" | sed -n 's/.*"'"$key"'"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+# ────────── Argument parsing ──────────
+
+DIR=""
+SLUG=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h) usage; exit 0 ;;
+    --slug)    SLUG="${2:?--slug requires a value}"; shift 2 ;;
+    --client)  CLIENT="${2:?--client requires a value}"; shift 2 ;;
+    --*)       die "unknown option: $1" ;;
+    *)
+      if [[ -z "$DIR" ]]; then DIR="$1"; shift
+      else die "unexpected argument: $1 (only one directory allowed)"
+      fi
+      ;;
+  esac
+done
+
+[[ -n "$DIR" ]] || { usage; exit 1; }
+[[ -d "$DIR" ]] || die "not a directory: $DIR"
+
+need_cmd curl
+need_cmd find
+
+# URL-encode a path segment. Pure-bash; no python/perl/jq needed.
+url_encode() {
+  local s="$1" out="" c hex i
+  for ((i = 0; i < ${#s}; i++)); do
+    c="${s:$i:1}"
+    case "$c" in
+      [a-zA-Z0-9.~_-]|/) out+="$c" ;;
+      *)
+        printf -v hex '%%%02X' "'$c"
+        out+="$hex"
+        ;;
+    esac
+  done
+  printf '%s' "$out"
+}
+
+# Resolve to absolute path so prefix-stripping works under symlinks.
+DIR="$(cd "$DIR" && pwd)"
+
+# ────────── 1. Build manifest ──────────
+
+echo "$(c_bold "wooven") $(c_dim "→") $DIR"
+
+declare -a FILES=()
+TOTAL_BYTES=0
+
+# Walk files (skip dotfiles, symlinks, anything > 10MB per file).
+while IFS= read -r -d '' f; do
+  rel="${f#"$DIR"/}"
+  case "$rel" in
+    .*|*/.*) continue ;;       # skip hidden
+  esac
+  size="$(file_size "$f")"
+  if [[ "$size" -gt $((10 * 1024 * 1024)) ]]; then
+    echo "$(c_yellow skip:) $rel ($(c_dim "$size bytes > 10MB"))"
+    continue
+  fi
+  FILES+=("$rel|$size")
+  TOTAL_BYTES=$((TOTAL_BYTES + size))
+done < <(find "$DIR" -type f -not -path '*/.*' -print0)
+
+FILE_COUNT="${#FILES[@]}"
+[[ "$FILE_COUNT" -gt 0 ]] || die "no files found in $DIR"
+[[ "$FILE_COUNT" -le 200 ]] || die "$FILE_COUNT files exceeds 200-file limit"
+[[ "$TOTAL_BYTES" -le $((25 * 1024 * 1024)) ]] || die "total $TOTAL_BYTES bytes exceeds 25MB limit"
+
+echo "$(c_dim " ") $FILE_COUNT files, $TOTAL_BYTES bytes"
+
+# ────────── 2. POST /v1/publish (or load existing claim) ──────────
+
+CLAIM_TOKEN=""
+if [[ -n "$SLUG" ]]; then
+  state_file="${STATE_DIR}/${SLUG}.json"
+  [[ -f "$state_file" ]] || die "no saved claim for slug '$SLUG' at $state_file"
+  CLAIM_TOKEN="$(json_field "claimToken" "$(cat "$state_file")")"
+  [[ -n "$CLAIM_TOKEN" ]] || die "claimToken missing from $state_file"
+  echo "$(c_dim " ") updating $SLUG.wooven.dev"
+else
+  resp="$(curl -fsSL -X POST "${API_BASE}/v1/publish/" \
+    -H "Content-Type: application/json" \
+    -H "User-Agent: wooven-cli/1 ($CLIENT)" \
+    -d "{\"client\":\"$(json_escape "$CLIENT")\",\"fileCount\":${FILE_COUNT},\"totalBytes\":${TOTAL_BYTES}}" \
+    2>&1)" || die "POST /v1/publish failed: $resp"
+
+  SLUG="$(json_field "slug" "$resp")"
+  CLAIM_TOKEN="$(json_field "claimToken" "$resp")"
+  EXPIRES_AT="$(json_field "expiresAt" "$resp")"
+  URL="$(json_field "url" "$resp")"
+  [[ -n "$SLUG" && -n "$CLAIM_TOKEN" ]] || die "malformed server response: $resp"
+
+  mkdir -p "$STATE_DIR"
+  state_file="${STATE_DIR}/${SLUG}.json"
+  printf '{"slug":"%s","claimToken":"%s","expiresAt":"%s","url":"%s","createdAt":"%s"}\n' \
+    "$(json_escape "$SLUG")" \
+    "$(json_escape "$CLAIM_TOKEN")" \
+    "$(json_escape "$EXPIRES_AT")" \
+    "$(json_escape "$URL")" \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    > "$state_file"
+  chmod 600 "$state_file"
+
+  echo "$(c_green " ✓") slug $(c_bold "$SLUG")"
+fi
+
+# ────────── 3. Upload each file ──────────
+
+i=0
+for entry in "${FILES[@]}"; do
+  rel="${entry%|*}"
+  i=$((i + 1))
+  abs="${DIR}/${rel}"
+  ct="$(content_type_for "$rel")"
+
+  # Pad with spaces so shorter filenames overwrite longer previous ones cleanly.
+  printf '\r\033[K%s %d/%d %s' "$(c_dim "  upload")" "$i" "$FILE_COUNT" "$(c_dim "$rel")"
+
+  upload_resp="$(curl -fsSL -X PUT \
+    "${API_BASE}/v1/publish/${SLUG}/file?path=$(url_encode "$rel")" \
+    -H "Authorization: Bearer ${CLAIM_TOKEN}" \
+    -H "Content-Type: ${ct}" \
+    --data-binary "@${abs}" 2>&1)" || {
+      printf '\n'
+      die "upload failed for $rel: $upload_resp"
+    }
+done
+printf '\n'
+
+# ────────── 4. Finalize ──────────
+
+final_resp="$(curl -fsSL -X POST "${API_BASE}/v1/publish/${SLUG}/finalize" \
+  -H "Authorization: Bearer ${CLAIM_TOKEN}" 2>&1)" || die "finalize failed: $final_resp"
+
+URL="$(json_field "url" "$final_resp")"
+[[ -n "$URL" ]] || URL="https://${SLUG}.wooven.dev/"
+
+# ────────── 5. Done ──────────
+
+cat <<EOF
+
+  $(c_green "✓ live at") $(c_bold "$URL")
+  $(c_dim "  expires in 24h. claim to keep it online: ${API_BASE}/claim?slug=${SLUG}")
+  $(c_dim "  state cached: ${STATE_DIR}/${SLUG}.json")
+
+EOF
