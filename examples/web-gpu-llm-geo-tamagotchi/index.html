@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GLOBO — pixel tamagotchi geography</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0a0a0a;
+      --paper: #ffffff;
+      --fog: #f4f4f4;
+      --line: #0a0a0a;
+      --warn: #b8860b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: clamp(15px, 1.1vw, 18px); }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-weight: 400;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 4vw, 3rem) clamp(4rem, 10vw, 8rem);
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: clamp(1.5rem, 4vw, 2.5rem);
+      border-bottom: 2px solid var(--line);
+    }
+
+    .logo {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .meta {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .hero {
+      padding-top: clamp(2rem, 5vw, 3rem);
+      padding-bottom: clamp(2rem, 5vw, 3rem);
+    }
+
+    .hero h1 {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: clamp(2rem, 6vw, 4rem);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      max-width: 16ch;
+    }
+
+    .hero .lede {
+      margin-top: 1.5rem;
+      max-width: 44rem;
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+
+    .game {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: clamp(1.5rem, 3vw, 2rem);
+      margin-top: clamp(1rem, 3vw, 2rem);
+    }
+
+    @media (min-width: 880px) {
+      .game { grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem); }
+    }
+
+    .panel {
+      border: 2px solid var(--line);
+      background: var(--paper);
+      padding: clamp(1rem, 2.5vw, 1.5rem);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .panel h2 {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .stage {
+      position: relative;
+      background: var(--fog);
+      border: 1px solid var(--line);
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+    }
+
+    .stage canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    #petCanvas { pointer-events: none; }
+
+    .stage .hint {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      font-family: inherit;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.7rem 1rem;
+      border: 2px solid var(--line);
+      background: var(--ink);
+      color: var(--paper);
+      cursor: pointer;
+      flex: 1 1 auto;
+      min-width: 8rem;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.9; }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      padding: 0.5rem;
+    }
+    .stat .k { opacity: 0.6; font-size: 0.6rem; }
+    .stat .v {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+    }
+
+    .log {
+      flex: 1 1 auto;
+      min-height: 14rem;
+      max-height: 28rem;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      padding: 0.75rem;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      background: var(--paper);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .msg { white-space: pre-wrap; word-wrap: break-word; }
+    .msg.system {
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.55;
+    }
+    .msg.guide {
+      border-left: 3px solid var(--ink);
+      padding-left: 0.6rem;
+    }
+    .msg.guide .who {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.2rem;
+      opacity: 0.7;
+    }
+    .msg.you {
+      background: var(--fog);
+      padding: 0.5rem 0.6rem;
+    }
+    .msg.you .who {
+      font-family: "Archivo Black", system-ui, sans-serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.2rem;
+      opacity: 0.7;
+    }
+    .msg.warn { color: var(--warn); }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .input-row input {
+      flex: 1;
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 0.7rem 0.8rem;
+      border: 2px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+    }
+    .input-row input:disabled { background: var(--fog); }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.65;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .progress {
+      height: 4px;
+      width: 100%;
+      background: var(--fog);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: var(--ink);
+      transition: width 0.2s linear;
+    }
+
+    footer {
+      margin-top: clamp(3rem, 8vw, 5rem);
+      padding-top: 1.5rem;
+      border-top: 2px solid var(--line);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.55;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="logo">GLOBO</span>
+      <span class="meta" id="engineMeta">Engine: detecting…</span>
+    </header>
+
+    <section class="hero">
+      <h1>A pixel tamagotchi learns the world.</h1>
+      <p class="lede">
+        Spin the globe, drop your companion on a country, and a local LLM —
+        running entirely in your browser via WebGPU — quizzes you on geography.
+        Right answers feed the pet. Wrong ones make it sulk.
+      </p>
+      <p class="lede" style="margin-top:1rem;font-size:0.75rem;opacity:0.7">
+        First load downloads ~700&nbsp;MB of model weights from huggingface.co.
+        On Brave: lower Shields for this page (Shields icon → Down).
+        On Chrome/Edge 113+: just works.
+      </p>
+    </section>
+
+    <div class="game">
+      <section class="panel">
+        <h2>Globe</h2>
+        <div class="stage">
+          <canvas id="globeCanvas" width="240" height="240" aria-label="rotating pixel earth"></canvas>
+          <canvas id="petCanvas" width="240" height="240" aria-hidden="true"></canvas>
+          <p class="hint" id="stageHint">Drag to spin. Click "Land here" to drop your pet.</p>
+        </div>
+        <div class="controls">
+          <button type="button" class="btn" id="landBtn" disabled>Land here</button>
+          <button type="button" class="btn btn-ghost" id="spinBtn">Auto-spin</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="k">Trips</span><br><span class="v" id="statTrips">0</span></div>
+          <div class="stat"><span class="k">Correct</span><br><span class="v" id="statCorrect">0</span></div>
+          <div class="stat"><span class="k">Mood</span><br><span class="v" id="statMood">OK</span></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Guide</h2>
+        <div class="log" id="log" aria-live="polite"></div>
+        <div class="progress" id="loadProgress" hidden><span></span></div>
+        <div class="input-row">
+          <input type="text" id="input" placeholder="Loading model…" disabled autocomplete="off" />
+          <button type="button" class="btn" id="sendBtn" disabled>Send</button>
+        </div>
+        <div class="status-bar">
+          <span id="modelStatus">Model: idle</span>
+          <span id="locationStatus">Location: —</span>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <span>© GLOBO</span>
+      <span>Local LLM · WebGPU · No accounts</span>
+    </footer>
+  </div>
+
+  <script type="module">
+    // ---------------------------------------------------------------------
+    // GLOBO — pixel tamagotchi geography tutor
+    // Three independent modules: Globe (render+pick), Pet (sprite+anim), LLM (transformers.js)
+    // ---------------------------------------------------------------------
+
+    // ---------- DOM ----------
+    const $ = (id) => document.getElementById(id);
+    const globeCanvas = $("globeCanvas");
+    const petCanvas = $("petCanvas");
+    const stageHint = $("stageHint");
+    const landBtn = $("landBtn");
+    const spinBtn = $("spinBtn");
+    const log = $("log");
+    const input = $("input");
+    const sendBtn = $("sendBtn");
+    const engineMeta = $("engineMeta");
+    const modelStatus = $("modelStatus");
+    const locationStatus = $("locationStatus");
+    const loadProgress = $("loadProgress");
+    const statTrips = $("statTrips");
+    const statCorrect = $("statCorrect");
+    const statMood = $("statMood");
+
+    const gctx = globeCanvas.getContext("2d");
+    const pctx = petCanvas.getContext("2d");
+
+    // ---------- Continent / country point cloud (lat, lon, name) ----------
+    // Hand-picked anchor cities — broad coverage, used both as continent dots and pickable locations.
+    const PLACES = [
+      // Europe
+      ["Lisbon", "Portugal", 38.7, -9.1],
+      ["Madrid", "Spain", 40.4, -3.7],
+      ["Paris", "France", 48.9, 2.3],
+      ["London", "UK", 51.5, -0.1],
+      ["Berlin", "Germany", 52.5, 13.4],
+      ["Rome", "Italy", 41.9, 12.5],
+      ["Athens", "Greece", 37.97, 23.7],
+      ["Stockholm", "Sweden", 59.3, 18.1],
+      ["Reykjavik", "Iceland", 64.1, -21.9],
+      ["Warsaw", "Poland", 52.2, 21.0],
+      ["Kyiv", "Ukraine", 50.4, 30.5],
+      ["Moscow", "Russia", 55.8, 37.6],
+      // Africa
+      ["Cairo", "Egypt", 30.0, 31.2],
+      ["Lagos", "Nigeria", 6.5, 3.4],
+      ["Nairobi", "Kenya", -1.3, 36.8],
+      ["Cape Town", "South Africa", -33.9, 18.4],
+      ["Addis Ababa", "Ethiopia", 9.0, 38.7],
+      ["Dakar", "Senegal", 14.7, -17.4],
+      ["Marrakesh", "Morocco", 31.6, -8.0],
+      ["Antananarivo", "Madagascar", -18.9, 47.5],
+      // Asia
+      ["Istanbul", "Turkey", 41.0, 29.0],
+      ["Tehran", "Iran", 35.7, 51.4],
+      ["Riyadh", "Saudi Arabia", 24.7, 46.7],
+      ["Mumbai", "India", 19.1, 72.9],
+      ["Delhi", "India", 28.6, 77.2],
+      ["Dhaka", "Bangladesh", 23.8, 90.4],
+      ["Bangkok", "Thailand", 13.8, 100.5],
+      ["Hanoi", "Vietnam", 21.0, 105.8],
+      ["Beijing", "China", 39.9, 116.4],
+      ["Shanghai", "China", 31.2, 121.5],
+      ["Seoul", "South Korea", 37.6, 127.0],
+      ["Tokyo", "Japan", 35.7, 139.7],
+      ["Manila", "Philippines", 14.6, 121.0],
+      ["Jakarta", "Indonesia", -6.2, 106.8],
+      ["Singapore", "Singapore", 1.35, 103.8],
+      ["Ulaanbaatar", "Mongolia", 47.9, 106.9],
+      ["Almaty", "Kazakhstan", 43.2, 76.9],
+      // Oceania
+      ["Sydney", "Australia", -33.9, 151.2],
+      ["Perth", "Australia", -31.95, 115.9],
+      ["Auckland", "New Zealand", -36.85, 174.8],
+      ["Suva", "Fiji", -18.1, 178.4],
+      // Americas
+      ["Anchorage", "USA", 61.2, -149.9],
+      ["Vancouver", "Canada", 49.3, -123.1],
+      ["San Francisco", "USA", 37.8, -122.4],
+      ["New York", "USA", 40.7, -74.0],
+      ["Chicago", "USA", 41.9, -87.6],
+      ["Mexico City", "Mexico", 19.4, -99.1],
+      ["Havana", "Cuba", 23.1, -82.4],
+      ["Bogotá", "Colombia", 4.7, -74.1],
+      ["Lima", "Peru", -12.0, -77.0],
+      ["Santiago", "Chile", -33.5, -70.7],
+      ["Buenos Aires", "Argentina", -34.6, -58.4],
+      ["Rio de Janeiro", "Brazil", -22.9, -43.2],
+      ["Brasília", "Brazil", -15.8, -47.9],
+    ];
+
+    // Extra pure-coastline filler points so the globe reads as continents, not just cities.
+    const COAST = [];
+    // Generate a coarse continent mask via a tiny hand-coded equirectangular bitmap (36x18 cells).
+    // 1 = land. Approximate, just enough to render recognisable shapes.
+    const LAND_MASK = [
+      "000000000000000000000111111000000000",
+      "000000000111111111111111111111111000",
+      "000000111111111111111111111111111110",
+      "000001111111111111111111111111111111",
+      "000011111111111111111111111111111110",
+      "000001111111111111111111111110000000",
+      "000000111111110001111111100000000000",
+      "000000011110000000111110000000000000",
+      "000000011110000000011110000000000000",
+      "000000011100000000001100000000000000",
+      "000000011000000000000110000000000000",
+      "000000111000000000000111000000000000",
+      "000000111000000000000111000000000000",
+      "000000110000000000000010000000000000",
+      "000000100000000000000000000000000000",
+      "000000000000000000000000000000000000",
+      "000000000000000000000000000000000000",
+      "000000000000000000000000000000000000",
+    ];
+    // The mask above is Eurasia-centred; shift columns so col 0 = lon -180.
+    // We treat it as (row, col) -> (lat, lon) where lat = 90 - row*10, lon = -180 + col*10.
+    for (let r = 0; r < LAND_MASK.length; r++) {
+      const row = LAND_MASK[r];
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] === "1") {
+          const lat = 85 - r * 10;
+          const lon = -175 + c * 10;
+          COAST.push([lat, lon]);
+        }
+      }
+    }
+
+    // ---------- Globe ----------
+    const Globe = (() => {
+      const W = globeCanvas.width;
+      const H = globeCanvas.height;
+      const cx = W / 2, cy = H / 2;
+      const R = Math.min(W, H) * 0.45;
+
+      let yaw = -1.6;        // longitude offset (radians)
+      let pitch = 0.35;      // latitude tilt
+      let autoSpin = true;
+      let dragging = false;
+      let lastX = 0, lastY = 0;
+      let hoverPlace = null;
+
+      // Project (lat, lon) on unit sphere → screen coords + visibility (z>0 = front).
+      function project(lat, lon) {
+        const la = lat * Math.PI / 180;
+        const lo = lon * Math.PI / 180 + yaw;
+        // sphere coords (y=up, z=towards viewer after pitch)
+        const x = Math.cos(la) * Math.sin(lo);
+        const y = Math.sin(la);
+        const z = Math.cos(la) * Math.cos(lo);
+        // pitch rotation around X axis
+        const cp = Math.cos(pitch), sp = Math.sin(pitch);
+        const y2 = y * cp - z * sp;
+        const z2 = y * sp + z * cp;
+        return {
+          sx: cx + x * R,
+          sy: cy - y2 * R,
+          z: z2,
+        };
+      }
+
+      function render() {
+        gctx.fillStyle = "#f4f4f4";
+        gctx.fillRect(0, 0, W, H);
+
+        // Sphere outline
+        gctx.fillStyle = "#ffffff";
+        gctx.beginPath();
+        gctx.arc(cx, cy, R + 1, 0, Math.PI * 2);
+        gctx.fill();
+        gctx.strokeStyle = "#0a0a0a";
+        gctx.lineWidth = 1;
+        gctx.stroke();
+
+        // Lat/lon grid (back hemisphere first, then front)
+        drawGrid(false);
+        drawGrid(true);
+
+        // Land mask points (back then front)
+        gctx.fillStyle = "#0a0a0a";
+        for (const [lat, lon] of COAST) {
+          const p = project(lat, lon);
+          if (p.z > 0) {
+            gctx.fillRect(Math.round(p.sx) - 1, Math.round(p.sy) - 1, 2, 2);
+          }
+        }
+
+        // City dots (front only) — bigger, clickable
+        for (const place of PLACES) {
+          const [, , lat, lon] = place;
+          const p = project(lat, lon);
+          if (p.z > 0.05) {
+            const isHover = hoverPlace === place;
+            gctx.fillStyle = isHover ? "#0a0a0a" : "#0a0a0a";
+            const s = isHover ? 4 : 2;
+            gctx.fillRect(Math.round(p.sx) - s / 2, Math.round(p.sy) - s / 2, s, s);
+            if (isHover) {
+              // Tag
+              gctx.font = "9px 'IBM Plex Mono', monospace";
+              gctx.fillStyle = "#ffffff";
+              const text = `${place[0]}, ${place[1]}`;
+              const w = gctx.measureText(text).width + 6;
+              gctx.fillRect(Math.round(p.sx) + 6, Math.round(p.sy) - 12, w, 14);
+              gctx.strokeStyle = "#0a0a0a";
+              gctx.strokeRect(Math.round(p.sx) + 6, Math.round(p.sy) - 12, w, 14);
+              gctx.fillStyle = "#0a0a0a";
+              gctx.fillText(text, Math.round(p.sx) + 9, Math.round(p.sy) - 2);
+            }
+          }
+        }
+      }
+
+      function drawGrid(front) {
+        gctx.strokeStyle = front ? "rgba(10,10,10,0.18)" : "rgba(10,10,10,0.07)";
+        gctx.lineWidth = 1;
+        // Latitudes
+        for (let lat = -60; lat <= 60; lat += 30) {
+          gctx.beginPath();
+          let started = false;
+          for (let lon = -180; lon <= 180; lon += 6) {
+            const p = project(lat, lon);
+            const isFront = p.z > 0;
+            if (isFront !== front) { started = false; continue; }
+            if (!started) { gctx.moveTo(p.sx, p.sy); started = true; }
+            else gctx.lineTo(p.sx, p.sy);
+          }
+          gctx.stroke();
+        }
+        // Longitudes
+        for (let lon = -180; lon < 180; lon += 30) {
+          gctx.beginPath();
+          let started = false;
+          for (let lat = -90; lat <= 90; lat += 6) {
+            const p = project(lat, lon);
+            const isFront = p.z > 0;
+            if (isFront !== front) { started = false; continue; }
+            if (!started) { gctx.moveTo(p.sx, p.sy); started = true; }
+            else gctx.lineTo(p.sx, p.sy);
+          }
+          gctx.stroke();
+        }
+      }
+
+      function pickAt(mx, my) {
+        // Find nearest visible PLACE within 14px.
+        let best = null, bestD = 14;
+        for (const place of PLACES) {
+          const [, , lat, lon] = place;
+          const p = project(lat, lon);
+          if (p.z <= 0.05) continue;
+          const dx = p.sx - mx, dy = p.sy - my;
+          const d = Math.hypot(dx, dy);
+          if (d < bestD) { bestD = d; best = place; }
+        }
+        return best;
+      }
+
+      function pickFront() {
+        // Choose the visible place closest to the centre (front of globe).
+        let best = null, bestZ = -1;
+        for (const place of PLACES) {
+          const [, , lat, lon] = place;
+          const p = project(lat, lon);
+          if (p.z > bestZ) { bestZ = p.z; best = place; }
+        }
+        return best;
+      }
+
+      // Pointer interaction
+      const stage = globeCanvas.parentElement;
+      function localCoords(e) {
+        const rect = globeCanvas.getBoundingClientRect();
+        return {
+          x: ((e.clientX - rect.left) / rect.width) * W,
+          y: ((e.clientY - rect.top) / rect.height) * H,
+        };
+      }
+      stage.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        autoSpin = false;
+        lastX = e.clientX; lastY = e.clientY;
+        stage.setPointerCapture?.(e.pointerId);
+      });
+      stage.addEventListener("pointermove", (e) => {
+        const { x, y } = localCoords(e);
+        hoverPlace = pickAt(x, y);
+        stage.style.cursor = hoverPlace ? "pointer" : (dragging ? "grabbing" : "grab");
+        if (dragging) {
+          const dx = e.clientX - lastX;
+          const dy = e.clientY - lastY;
+          lastX = e.clientX; lastY = e.clientY;
+          yaw += dx * 0.01;
+          pitch = Math.max(-1.2, Math.min(1.2, pitch - dy * 0.01));
+        }
+      });
+      stage.addEventListener("pointerup", () => { dragging = false; });
+      stage.addEventListener("pointerleave", () => { dragging = false; hoverPlace = null; });
+      globeCanvas.addEventListener("click", (e) => {
+        const { x, y } = localCoords(e);
+        const hit = pickAt(x, y);
+        if (hit) onLand(hit);
+      });
+
+      function tick() {
+        if (autoSpin && !dragging) yaw += 0.004;
+        render();
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
+      return {
+        get hoverPlace() { return hoverPlace; },
+        pickFront,
+        setAutoSpin(v) { autoSpin = v; },
+        get autoSpin() { return autoSpin; },
+        project,
+      };
+    })();
+
+    spinBtn.addEventListener("click", () => {
+      Globe.setAutoSpin(!Globe.autoSpin);
+      spinBtn.textContent = Globe.autoSpin ? "Stop spin" : "Auto-spin";
+    });
+
+    // ---------- Pet ----------
+    const Pet = (() => {
+      const W = petCanvas.width, H = petCanvas.height;
+      let mood = "ok"; // ok | happy | sad
+      let landedAt = null; // {sx, sy}
+      let walkPhase = 0;
+
+      // 16x16 monochrome sprite
+      const SPRITE = [
+        "      ######    ",
+        "    ##      ##  ",
+        "   #          # ",
+        "  #            #",
+        "  #  #      #  #",
+        "  #            #",
+        "  #            #",
+        "  #            #",
+        "  #   #    #   #",
+        "   #   ####   # ",
+        "    ##      ##  ",
+        "      ######    ",
+        "      #    #    ",
+        "      #    #    ",
+        "     ##    ##   ",
+        "                ",
+      ];
+      const SPRITE_HAPPY = [
+        "      ######    ",
+        "    ##      ##  ",
+        "   #          # ",
+        "  #            #",
+        "  # ##      ## #",
+        "  #            #",
+        "  #            #",
+        "  #   ######   #",
+        "  #  #      #  #",
+        "   ##        ## ",
+        "    ##      ##  ",
+        "      ######    ",
+        "     #      #   ",
+        "      #    #    ",
+        "     ##    ##   ",
+        "                ",
+      ];
+      const SPRITE_SAD = [
+        "      ######    ",
+        "    ##      ##  ",
+        "   #          # ",
+        "  #            #",
+        "  #  -      -  #",
+        "  #            #",
+        "  #            #",
+        "  #            #",
+        "  #            #",
+        "   #  ######  # ",
+        "    ##      ##  ",
+        "      ######    ",
+        "      #    #    ",
+        "      #    #    ",
+        "     ##    ##   ",
+        "                ",
+      ];
+
+      function drawSprite(rows, ox, oy) {
+        pctx.fillStyle = "#0a0a0a";
+        for (let y = 0; y < rows.length; y++) {
+          const row = rows[y];
+          for (let x = 0; x < row.length; x++) {
+            const ch = row[x];
+            if (ch === "#") pctx.fillRect(ox + x, oy + y, 1, 1);
+            else if (ch === "-") pctx.fillRect(ox + x, oy + y + 1, 1, 1);
+          }
+        }
+      }
+
+      function drawIsoTile(cx, cy) {
+        // 24-wide isometric diamond as a small "ground patch" under the pet.
+        pctx.fillStyle = "#ffffff";
+        pctx.beginPath();
+        pctx.moveTo(cx, cy - 8);
+        pctx.lineTo(cx + 16, cy);
+        pctx.lineTo(cx, cy + 8);
+        pctx.lineTo(cx - 16, cy);
+        pctx.closePath();
+        pctx.fill();
+        pctx.strokeStyle = "#0a0a0a";
+        pctx.lineWidth = 1;
+        pctx.stroke();
+        // checker
+        pctx.fillStyle = "rgba(10,10,10,0.15)";
+        pctx.beginPath();
+        pctx.moveTo(cx, cy - 4);
+        pctx.lineTo(cx + 8, cy);
+        pctx.lineTo(cx, cy + 4);
+        pctx.lineTo(cx - 8, cy);
+        pctx.closePath();
+        pctx.fill();
+      }
+
+      function tick() {
+        pctx.clearRect(0, 0, W, H);
+        if (!landedAt) {
+          // Floating idle pet at corner
+          const t = performance.now() * 0.003;
+          const ox = 8 + Math.round(Math.sin(t) * 1.5);
+          const oy = H - 24 + Math.round(Math.cos(t * 1.3) * 1);
+          drawSprite(SPRITE, ox, oy);
+        } else {
+          walkPhase += 0.08;
+          const bob = Math.round(Math.sin(walkPhase) * 1.5);
+          drawIsoTile(landedAt.sx, landedAt.sy + 14);
+          const rows = mood === "happy" ? SPRITE_HAPPY : mood === "sad" ? SPRITE_SAD : SPRITE;
+          drawSprite(rows, landedAt.sx - 8, landedAt.sy - 12 + bob);
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
+      return {
+        landAt(sx, sy) { landedAt = { sx, sy }; },
+        clear() { landedAt = null; },
+        setMood(m) { mood = m; },
+      };
+    })();
+
+    // ---------- Game state ----------
+    const state = {
+      trips: 0,
+      correct: 0,
+      mood: "OK",
+      currentPlace: null,
+      awaitingAnswer: false,
+      lastQuestion: null,
+      ready: false,
+      busy: false,
+    };
+    function syncStats() {
+      statTrips.textContent = state.trips;
+      statCorrect.textContent = state.correct;
+      statMood.textContent = state.mood;
+    }
+
+    // ---------- Logging ----------
+    function addMsg(kind, text, who) {
+      const div = document.createElement("div");
+      div.className = `msg ${kind}`;
+      if (who) {
+        const w = document.createElement("span");
+        w.className = "who";
+        w.textContent = who;
+        div.appendChild(w);
+      }
+      const t = document.createTextNode(text);
+      div.appendChild(t);
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      return div;
+    }
+
+    function streamingMsg(who) {
+      const div = addMsg("guide", "", who);
+      const tnode = div.lastChild;
+      return {
+        append(s) { tnode.nodeValue += s; log.scrollTop = log.scrollHeight; },
+        finalize(s) { if (s != null) tnode.nodeValue = s; log.scrollTop = log.scrollHeight; },
+      };
+    }
+
+    // ---------- LLM (transformers.js + WebGPU) ----------
+    const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2";
+    let TF = null; // cached module
+    async function getTF() { return TF ??= await import(TRANSFORMERS_URL); }
+
+    let LLM = null;
+
+    async function probeWebGPU() {
+      if (!navigator.gpu) return { hasGPU: false, hasF16: false, adapterInfo: null };
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (!adapter) return { hasGPU: false, hasF16: false, adapterInfo: null };
+        const hasF16 = adapter.features.has("shader-f16");
+        let info = null;
+        try { info = await adapter.requestAdapterInfo?.(); } catch {}
+        return { hasGPU: true, hasF16, adapterInfo: info };
+      } catch {
+        return { hasGPU: false, hasF16: false, adapterInfo: null };
+      }
+    }
+
+    async function initLLM() {
+      const { hasGPU, hasF16, adapterInfo } = await probeWebGPU();
+      const gpuLabel = adapterInfo?.description || adapterInfo?.vendor || "GPU";
+      engineMeta.textContent = hasGPU
+        ? `Engine: WebGPU · ${hasF16 ? "f16" : "f32"} · ${gpuLabel}`
+        : "Engine: WASM (slow — WebGPU unavailable)";
+      if (!hasGPU) {
+        addMsg("warn", "WebGPU not detected. Try Chrome 113+ or enable chrome://flags/#enable-unsafe-webgpu. Falling back to WASM, which will be very slow.");
+      } else if (!hasF16) {
+        addMsg("system", "Your GPU lacks shader-f16. Using q4 weights (slightly larger, equally fast).");
+      }
+
+      modelStatus.textContent = "Model: importing transformers.js…";
+      addMsg("system", "Loading local LLM (Llama-3.2-1B). First run downloads ~700MB and caches in your browser. Subsequent loads are instant.");
+      loadProgress.hidden = false;
+      const bar = loadProgress.firstElementChild;
+
+      try {
+        const { pipeline, env } = await getTF();
+        env.allowLocalModels = false;
+        env.useBrowserCache = true;
+
+        // Llama-3.2-1B is officially recommended for transformers.js v3 + WebGPU.
+        // q4 weights stay coherent at this scale; q4f16 is tried first when supported.
+        const modelId = "onnx-community/Llama-3.2-1B-Instruct";
+
+        const tryLoad = async (dtype) => {
+          modelStatus.textContent = `Model: downloading weights (${dtype})…`;
+          return await pipeline("text-generation", modelId, {
+            device: hasGPU ? "webgpu" : "wasm",
+            dtype,
+            progress_callback: (p) => {
+              if (p.status === "progress" && typeof p.progress === "number") {
+                bar.style.width = p.progress.toFixed(1) + "%";
+                modelStatus.textContent = `Model: ${p.file ?? "loading"} ${p.progress.toFixed(0)}%`;
+              }
+            },
+          });
+        };
+
+        // Pick dtype based on actual GPU capabilities, not optimism.
+        // shader-f16 absent → q4f16 will crash inside ORT WebGPU. Use q4 instead.
+        let usedDtype = hasF16 ? "q4f16" : "q4";
+        let generator;
+        try {
+          generator = await tryLoad(usedDtype);
+        } catch (loadErr) {
+          // Last-ditch retry on q4 if q4f16 still failed for any reason.
+          if (usedDtype === "q4f16") {
+            addMsg("system", "q4f16 init failed — retrying with q4 weights.");
+            usedDtype = "q4";
+            generator = await tryLoad(usedDtype);
+          } else {
+            throw loadErr;
+          }
+        }
+        loadProgress.hidden = true;
+        modelStatus.textContent = `Model: ready · Llama-3.2-1B · ${usedDtype} · ${hasGPU ? "WebGPU" : "WASM"}`;
+        LLM = generator;
+        state.ready = true;
+        landBtn.disabled = false;
+        addMsg("system", "Model loaded. Spin the globe and land your pet on a city to start a quiz.");
+      } catch (err) {
+        loadProgress.hidden = true;
+        modelStatus.textContent = "Model: failed";
+        const raw = err?.message ?? err?.toString?.() ?? String(err);
+        // ONNX Runtime throws bare numeric error codes from Emscripten on memory/init failure.
+        const looksLikeOrtCrash = /^\d+$/.test(raw.trim());
+        if (looksLikeOrtCrash) {
+          addMsg("warn", `Model load crashed inside ONNX Runtime (code ${raw}). On Brave: open Shields for this page and disable "Block fingerprinting" + "Block scripts" — they strip headers HF Hub needs. Then reload.`);
+        } else if (/Content-Length|content-length/.test(raw)) {
+          addMsg("warn", `Header stripped by browser privacy shield: ${raw}. On Brave: lower Shields for huggingface.co.`);
+        } else {
+          addMsg("warn", `Failed to load model: ${raw}`);
+        }
+        console.error(err);
+      }
+    }
+
+    async function llmChat(messages, onToken) {
+      if (!LLM) throw new Error("Model not ready");
+      const { TextStreamer } = await getTF();
+
+      const runOnce = async () => {
+        const tokenizer = LLM.tokenizer;
+        const inputs = tokenizer.apply_chat_template(messages, {
+          tokenize: false,
+          add_generation_prompt: true,
+        });
+        let out = "";
+        const streamer = new TextStreamer(tokenizer, {
+          skip_prompt: true,
+          skip_special_tokens: true,
+          callback_function: (txt) => {
+            out += txt;
+            onToken?.(txt);
+          },
+        });
+        await LLM(inputs, {
+          max_new_tokens: 120,
+          temperature: 0.6,
+          top_p: 0.9,
+          do_sample: true,
+          repetition_penalty: 1.15,
+          streamer,
+        });
+        return out.trim();
+      };
+
+      return await runOnce();
+    }
+
+    // ---------- Game flow ----------
+    function projectScreen(lat, lon) {
+      const p = Globe.project(lat, lon);
+      // Map sphere canvas coords (240x240) into pet canvas coords (also 240x240, same size).
+      return { sx: p.sx, sy: p.sy };
+    }
+
+    async function onLand(place) {
+      if (!state.ready || state.busy) return;
+      state.busy = true;
+      landBtn.disabled = true;
+      input.disabled = true;
+      sendBtn.disabled = true;
+
+      const [city, country, lat, lon] = place;
+      state.currentPlace = place;
+      state.trips += 1;
+      Pet.setMood("ok");
+      const screen = projectScreen(lat, lon);
+      Pet.landAt(screen.sx, screen.sy);
+      Globe.setAutoSpin(false);
+      spinBtn.textContent = "Auto-spin";
+      locationStatus.textContent = `Location: ${city}, ${country}`;
+      syncStats();
+
+      addMsg("system", `Landed in ${city}, ${country}.`);
+      const stream = streamingMsg("Guide");
+      try {
+        const reply = await llmChat([
+          {
+            role: "system",
+            content: "You are a brief, friendly geography tutor. Output exactly two lines:\nLine 1: One true factual sentence (max 25 words) about the given city or country.\nLine 2: 'Q: ' followed by one short beginner quiz question about that country (geography, capital, language, neighbors, or famous landmark).\nNo extra text.",
+          },
+          {
+            role: "user",
+            content: `City: ${city}\nCountry: ${country}\n\nGive the fact and the question now.`,
+          },
+        ], (t) => stream.append(t));
+
+        const qMatch = reply.match(/Q:\s*(.+?)$/ims);
+        state.lastQuestion = qMatch ? qMatch[1].trim() : reply;
+        state.awaitingAnswer = true;
+        input.placeholder = "Your answer…";
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+      } catch (err) {
+        stream.finalize(`(error) ${err.message ?? err}`);
+      } finally {
+        state.busy = false;
+        landBtn.disabled = false;
+      }
+    }
+
+    async function onAnswer(answer) {
+      if (!state.awaitingAnswer || state.busy) return;
+      state.busy = true;
+      input.disabled = true;
+      sendBtn.disabled = true;
+
+      addMsg("you", answer, "You");
+      const stream = streamingMsg("Guide");
+      try {
+        const reply = await llmChat([
+          {
+            role: "system",
+            content: "You judge whether a geography answer is correct. Output exactly two lines:\nLine 1: '<CORRECT>' or '<WRONG>' (no other text).\nLine 2: One short encouraging sentence (max 25 words) with the right answer if needed.\nNo extra text.",
+          },
+          {
+            role: "user",
+            content: `Country: ${state.currentPlace[1]}\nQuestion: ${state.lastQuestion}\nUser answer: ${answer}\n\nJudge now.`,
+          },
+        ], (t) => stream.append(t));
+
+        const correct = /<CORRECT>/i.test(reply);
+        const wrong = /<WRONG>/i.test(reply);
+        if (correct) {
+          state.correct += 1;
+          state.mood = "HAPPY";
+          Pet.setMood("happy");
+        } else if (wrong) {
+          state.mood = "SAD";
+          Pet.setMood("sad");
+        }
+        syncStats();
+      } catch (err) {
+        stream.finalize(`(error) ${err.message ?? err}`);
+      } finally {
+        state.awaitingAnswer = false;
+        state.busy = false;
+        input.placeholder = "Land somewhere new…";
+        input.value = "";
+        input.disabled = true;
+        sendBtn.disabled = true;
+        landBtn.disabled = false;
+      }
+    }
+
+    // ---------- Buttons ----------
+    landBtn.addEventListener("click", () => {
+      const target = Globe.hoverPlace || Globe.pickFront();
+      if (target) onLand(target);
+    });
+    sendBtn.addEventListener("click", () => {
+      const v = input.value.trim();
+      if (v) onAnswer(v);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const v = input.value.trim();
+        if (v) onAnswer(v);
+      }
+    });
+
+    // ---------- Boot ----------
+    syncStats();
+    initLLM();
+  </script>
+</body>
+</html>
