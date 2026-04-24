@@ -1,0 +1,160 @@
+:root {
+  --fg: #f4f4f4;
+  --bg: #000;
+  --dim: #6c6c6c;
+  --ui-font: system-ui, -apple-system, "Inter", "Helvetica Neue", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: #000;
+  color: var(--fg);
+  font-family: var(--ui-font);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.02em;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+#frame {
+  position: relative;
+  width: min(96vw, 96vh * 4 / 3);
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border: 1px solid var(--fg);
+  border-radius: 4px;
+  box-shadow: 0 0 0 4px #000, 0 0 40px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+#screen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: auto;
+  background: #000;
+}
+
+#scan {
+  display: none;
+}
+
+#vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  text-align: center;
+  z-index: 5;
+}
+
+.overlay.hidden { display: none; }
+
+.overlay h1 {
+  font-size: clamp(1.8rem, 4.5vw, 3.2rem);
+  font-weight: 300;
+  letter-spacing: 0.4em;
+  margin-left: 0.4em;
+}
+
+.overlay .sub {
+  color: var(--dim);
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.keys {
+  list-style: none;
+  margin-top: 1.2rem;
+  font-size: 0.82rem;
+  color: var(--dim);
+  display: grid;
+  gap: 0.3rem;
+  font-weight: 400;
+}
+.keys b {
+  color: var(--fg);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+.press {
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  font-weight: 400;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.hi {
+  margin-top: 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  color: var(--dim);
+  font-weight: 500;
+}
+
+.stats {
+  margin-top: 0.8rem;
+  width: min(300px, 75%);
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+  display: grid;
+  gap: 0.2rem;
+  font-weight: 400;
+}
+
+.stats .row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.2rem 0;
+}
+
+.stats .row span:last-child {
+  color: var(--fg);
+  font-weight: 500;
+}
+.stats .row.sub { border-bottom: none; opacity: 0.7; }
+.stats .hist {
+  margin-top: 0.6rem;
+  color: var(--fg);
+  text-align: center;
+  letter-spacing: 0.4em;
+  font-size: 0.68rem;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}

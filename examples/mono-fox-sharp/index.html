@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MONOFOX // 1-bit corridor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="frame">
+    <canvas id="screen" width="640" height="480"></canvas>
+    <div id="scan"></div>
+    <div id="vignette"></div>
+
+    <div id="boot" class="overlay">
+      <h1>MONOFOX</h1>
+      <p class="sub">1-bit corridor // procedural</p>
+      <ul class="keys">
+        <li><b>WASD</b> / <b>arrows</b> &mdash; fly</li>
+        <li><b>space</b> &mdash; shoot</li>
+        <li><b>P</b> &mdash; pause</li>
+        <li><b>R</b> &mdash; restart on death</li>
+      </ul>
+      <p class="hi" id="boot-hi">HI 0</p>
+      <p class="press">press any key</p>
+    </div>
+
+    <div id="dead" class="overlay hidden">
+      <h1>SIGNAL LOST</h1>
+      <p class="sub">shield depleted</p>
+      <div id="dead-stats" class="stats"></div>
+      <p class="press">press R to restart</p>
+    </div>
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>
