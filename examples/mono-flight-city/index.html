@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wire Fox — procedural flight</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="c" width="800" height="500"></canvas>
+    <div id="hud">
+      <div class="bar"><span>HULL</span><div class="fill" id="hull"></div></div>
+      <div id="dist">0 m</div>
+    </div>
+    <div id="title" class="panel">
+      <h1>Wire Fox</h1>
+      <p>SNES-style corridor flight · monochrome wireframe</p>
+      <ul>
+        <li><kbd>WASD</kbd> / arrows — drift</li>
+        <li><kbd>P</kbd> — pause</li>
+        <li><kbd>R</kbd> — restart</li>
+      </ul>
+      <p class="hint">press any key</p>
+    </div>
+    <div id="dead" class="panel hidden">
+      <h1>HULL BREACH</h1>
+      <p id="dead-dist"></p>
+      <p class="hint"><kbd>R</kbd> restart</p>
+    </div>
+  </div>
+  <script src="game.js?v=20260501-1801"></script>
+</body>
+</html>

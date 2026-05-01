@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Minimal black and white design portfolio with colorful project mockups.">
+  <title>Studio Vale | Design Portfolio</title>
+  <style>
+    :root {
+      --bg: #fff;
+      --ink: #050505;
+      --muted: #666;
+      --line: #111;
+      --soft: #f4f4f1;
+      --radius: 28px;
+      --ease: cubic-bezier(.2, .8, .2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-rendering: geometricPrecision;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      display: block;
+      width: 100%;
+    }
+
+    .grain {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      opacity: .22;
+      background-image:
+        linear-gradient(90deg, rgba(0,0,0,.025) 1px, transparent 1px),
+        linear-gradient(rgba(0,0,0,.02) 1px, transparent 1px);
+      background-size: 4px 4px;
+      mix-blend-mode: multiply;
+    }
+
+    .page {
+      width: min(100% - 32px, 1440px);
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 22px 0;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(0,0,0,.08);
+    }
+
+    .brand {
+      font-weight: 950;
+      letter-spacing: -.06em;
+      text-transform: uppercase;
+    }
+
+    .nav__links {
+      display: flex;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .nav__links a {
+      position: relative;
+      padding: 9px 12px;
+      border: 1px solid transparent;
+      transition: color .25s var(--ease), border-color .25s var(--ease), transform .25s var(--ease);
+    }
+
+    .nav__links a:hover,
+    .nav__links a:focus-visible {
+      color: var(--ink);
+      border-color: var(--ink);
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    .hero {
+      min-height: 86svh;
+      display: grid;
+      align-content: space-between;
+      padding: clamp(44px, 8vw, 108px) 0 28px;
+    }
+
+    .kicker {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      color: var(--muted);
+      font-size: clamp(13px, 1.2vw, 16px);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .hero__title {
+      margin: clamp(50px, 7vw, 96px) 0 clamp(34px, 5vw, 70px);
+      max-width: 13ch;
+      font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+      font-size: clamp(5.5rem, 18vw, 18rem);
+      font-weight: 900;
+      line-height: .76;
+      letter-spacing: -.08em;
+      text-transform: uppercase;
+    }
+
+    .hero__footer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      border-top: 2px solid var(--ink);
+      padding-top: 24px;
+    }
+
+    .hero__copy {
+      max-width: 680px;
+      margin: 0;
+      font-size: clamp(22px, 3vw, 44px);
+      line-height: 1.02;
+      letter-spacing: -.055em;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 58px;
+      padding: 0 24px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--bg);
+      font-weight: 850;
+      letter-spacing: -.03em;
+      transition: transform .25s var(--ease), background .25s var(--ease), color .25s var(--ease);
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      background: var(--bg);
+      color: var(--ink);
+      transform: translateY(-4px);
+      outline: none;
+    }
+
+    .section {
+      padding: clamp(80px, 12vw, 168px) 0;
+      border-top: 1px solid rgba(0,0,0,.13);
+    }
+
+    .section__head {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: clamp(28px, 6vw, 92px);
+      margin-bottom: clamp(40px, 7vw, 88px);
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .section__title {
+      margin: 0;
+      max-width: 900px;
+      font-size: clamp(42px, 8vw, 132px);
+      line-height: .86;
+      letter-spacing: -.075em;
+      text-transform: uppercase;
+    }
+
+    .work {
+      display: grid;
+      gap: 22px;
+    }
+
+    .project {
+      --mx: 50%;
+      --my: 50%;
+      position: relative;
+      display: grid;
+      grid-template-columns: .9fr 1.25fr;
+      gap: clamp(22px, 5vw, 74px);
+      min-height: 580px;
+      padding: clamp(20px, 3vw, 42px);
+      overflow: hidden;
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at var(--mx) var(--my), rgba(0,0,0,.08), transparent 22rem),
+        var(--bg);
+      transform: translateY(28px);
+      opacity: 0;
+      transition: transform .75s var(--ease), opacity .75s var(--ease), border-radius .35s var(--ease);
+    }
+
+    .project.is-visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .project:hover {
+      border-radius: 12px;
+    }
+
+    .project__meta {
+      display: grid;
+      align-content: space-between;
+      gap: 32px;
+    }
+
+    .project__number {
+      font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+      font-size: clamp(76px, 11vw, 172px);
+      line-height: .78;
+      letter-spacing: -.08em;
+    }
+
+    .project__title {
+      margin: 0 0 18px;
+      max-width: 8ch;
+      font-size: clamp(42px, 6vw, 96px);
+      line-height: .86;
+      letter-spacing: -.07em;
+      text-transform: uppercase;
+    }
+
+    .project__text {
+      max-width: 420px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .tag {
+      padding: 8px 11px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .mockup {
+      position: relative;
+      align-self: stretch;
+      min-height: 500px;
+      perspective: 1200px;
+    }
+
+    .device {
+      position: absolute;
+      overflow: hidden;
+      border: 2px solid var(--ink);
+      background: var(--soft);
+      box-shadow: 18px 18px 0 var(--ink);
+      transition: transform .45s var(--ease), box-shadow .45s var(--ease);
+    }
+
+    .project:hover .device {
+      box-shadow: 10px 10px 0 var(--ink);
+    }
+
+    .device--desktop {
+      inset: 8% 0 12% 2%;
+      border-radius: 22px;
+      transform: rotate(-1.5deg);
+    }
+
+    .device--phone {
+      right: 5%;
+      bottom: 3%;
+      width: min(32%, 220px);
+      aspect-ratio: 9 / 16;
+      border-radius: 32px;
+      transform: rotate(4deg);
+      z-index: 2;
+    }
+
+    .project:hover .device--desktop {
+      transform: rotate(0deg) translateY(-8px);
+    }
+
+    .project:hover .device--phone {
+      transform: rotate(0deg) translate(-8px, -10px);
+    }
+
+    .device__bar {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      border-bottom: 2px solid var(--ink);
+      background: #fff;
+    }
+
+    .device--phone .device__bar {
+      justify-content: center;
+      height: 34px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border: 1px solid var(--ink);
+      border-radius: 50%;
+      background: var(--ink);
+    }
+
+    .notch {
+      width: 58px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--ink);
+    }
+
+    .screen {
+      height: calc(100% - 38px);
+      overflow: hidden;
+    }
+
+    .device--phone .screen {
+      height: calc(100% - 34px);
+    }
+
+    .screen img {
+      height: 100%;
+      object-fit: cover;
+      filter: saturate(1.15) contrast(1.03);
+      transition: transform 1.2s var(--ease), filter .45s var(--ease);
+    }
+
+    .project:hover .screen img {
+      transform: scale(1.06);
+      filter: saturate(1.35) contrast(1.05);
+    }
+
+    .about {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(32px, 8vw, 120px);
+      align-items: start;
+    }
+
+    .about p {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 68px);
+      line-height: .98;
+      letter-spacing: -.065em;
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--ink);
+      font-size: 18px;
+    }
+
+    .stat strong {
+      font-size: clamp(36px, 7vw, 92px);
+      line-height: .8;
+      letter-spacing: -.07em;
+    }
+
+    .contact {
+      min-height: 58svh;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .contact h2 {
+      margin: 0 0 28px;
+      max-width: 900px;
+      font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+      font-size: clamp(72px, 15vw, 220px);
+      line-height: .76;
+      letter-spacing: -.08em;
+      text-transform: uppercase;
+    }
+
+    .contact a:not(.button) {
+      display: inline-block;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 28px 0 40px;
+      border-top: 2px solid var(--ink);
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 900px) {
+      .hero__footer,
+      .section__head,
+      .project,
+      .about {
+        grid-template-columns: 1fr;
+      }
+
+      .project {
+        min-height: auto;
+      }
+
+      .mockup {
+        min-height: 460px;
+      }
+
+      .device--desktop {
+        inset: 0 8% 8% 0;
+      }
+
+      .device--phone {
+        width: 34%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 24px, 1440px);
+      }
+
+      .nav {
+        align-items: flex-start;
+      }
+
+      .nav__links {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0;
+      }
+
+      .kicker,
+      .footer {
+        flex-direction: column;
+      }
+
+      .hero__title {
+        font-size: clamp(4.8rem, 25vw, 9rem);
+      }
+
+      .project {
+        padding: 16px;
+        border-radius: 20px;
+      }
+
+      .mockup {
+        min-height: 350px;
+      }
+
+      .device {
+        box-shadow: 9px 9px 0 var(--ink);
+      }
+
+      .device--phone {
+        width: 38%;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+      }
+
+      .project {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <main class="page">
+    <nav class="nav" aria-label="Main navigation">
+      <a class="brand" href="#">Studio Vale</a>
+      <div class="nav__links">
+        <a href="#work">Work</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="kicker">
+        <span>Independent Digital Designer</span>
+        <span>Brand / Product / Motion</span>
+      </div>
+
+      <h1 class="hero__title">Brutal Clarity</h1>
+
+      <div class="hero__footer">
+        <p class="hero__copy">I make calm, direct interfaces for teams that care about taste, speed, and the last five percent.</p>
+        <a class="button" href="#work">View Work</a>
+      </div>
+    </header>
+
+    <section class="section" id="work" aria-labelledby="work-title">
+      <div class="section__head">
+        <p class="eyebrow">Selected Work</p>
+        <h2 class="section__title" id="work-title">Three studies in color, contrast, and restraint.</h2>
+      </div>
+
+      <div class="work">
+        <article class="project">
+          <div class="project__meta">
+            <span class="project__number">01</span>
+            <div>
+              <h3 class="project__title">Sora Supply</h3>
+              <p class="project__text">A visual system for a modern homeware label, built around editorial product photography and tight conversion flows.</p>
+              <div class="tags" aria-label="Project tags">
+                <span class="tag">Ecommerce</span>
+                <span class="tag">Art Direction</span>
+                <span class="tag">Web Design</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mockup" aria-hidden="true">
+            <div class="device device--desktop">
+              <div class="device__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+              <div class="screen">
+                <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=85" alt="">
+              </div>
+            </div>
+            <div class="device device--phone">
+              <div class="device__bar"><span class="notch"></span></div>
+              <div class="screen">
+                <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=85" alt="">
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="project">
+          <div class="project__meta">
+            <span class="project__number">02</span>
+            <div>
+              <h3 class="project__title">Orbit Lab</h3>
+              <p class="project__text">A launch identity and web experience for a research studio, pairing hard typography with playful campaign imagery.</p>
+              <div class="tags" aria-label="Project tags">
+                <span class="tag">Identity</span>
+                <span class="tag">Launch Site</span>
+                <span class="tag">Interaction</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mockup" aria-hidden="true">
+            <div class="device device--desktop">
+              <div class="device__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+              <div class="screen">
+                <img src="https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1400&q=85" alt="">
+              </div>
+            </div>
+            <div class="device device--phone">
+              <div class="device__bar"><span class="notch"></span></div>
+              <div class="screen">
+                <img src="https://images.unsplash.com/photo-1558655146-364adaf1fcc9?auto=format&fit=crop&w=800&q=85" alt="">
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="project">
+          <div class="project__meta">
+            <span class="project__number">03</span>
+            <div>
+              <h3 class="project__title">Mono Field</h3>
+              <p class="project__text">A portfolio platform for photographers that keeps navigation invisible until it is useful, then gets out of the way.</p>
+              <div class="tags" aria-label="Project tags">
+                <span class="tag">Product</span>
+                <span class="tag">CMS</span>
+                <span class="tag">Prototype</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mockup" aria-hidden="true">
+            <div class="device device--desktop">
+              <div class="device__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+              <div class="screen">
+                <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=85" alt="">
+              </div>
+            </div>
+            <div class="device device--phone">
+              <div class="device__bar"><span class="notch"></span></div>
+              <div class="screen">
+                <img src="https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=85" alt="">
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section about" id="about" aria-labelledby="about-title">
+      <div>
+        <p class="eyebrow">About</p>
+        <p id="about-title">Small studio energy. Senior product instincts. No decorative nonsense.</p>
+      </div>
+      <div class="stats" aria-label="Studio metrics">
+        <div class="stat"><span>Years shaping digital products</span><strong>09</strong></div>
+        <div class="stat"><span>Launches across brand and SaaS</span><strong>48</strong></div>
+        <div class="stat"><span>Average handoff satisfaction</span><strong>97%</strong></div>
+      </div>
+    </section>
+
+    <section class="section contact" id="contact" aria-labelledby="contact-title">
+      <div>
+        <h2 id="contact-title">Make it stark.</h2>
+        <a class="button" href="mailto:hello@studiovale.design">Start a Project</a>
+        <br>
+        <a href="mailto:hello@studiovale.design">hello@studiovale.design</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Studio Vale © 2026</span>
+      <span>Black / White / Color Where It Counts</span>
+    </footer>
+  </main>
+
+  <script>
+    const projects = document.querySelectorAll(".project");
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.18 });
+
+    projects.forEach((project) => {
+      observer.observe(project);
+
+      project.addEventListener("pointermove", (event) => {
+        const rect = project.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 100;
+        const y = ((event.clientY - rect.top) / rect.height) * 100;
+        project.style.setProperty("--mx", `${x}%`);
+        project.style.setProperty("--my", `${y}%`);
+      });
+    });
+  </script>
+</body>
+</html>
