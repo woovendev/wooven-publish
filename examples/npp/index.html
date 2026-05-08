@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NPP - Monochrome Platformer Prototype</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #000;
+        color: #fff;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+
+      .frame {
+        width: min(920px, 96vw);
+        border: 2px solid #fff;
+        padding: 10px;
+      }
+
+      .hud {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 12px;
+        letter-spacing: 0.05em;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid #fff;
+        background: #000;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="frame">
+      <div class="hud">
+        <span>NPP // monochrome prototype</span>
+        <span>move: A/D or arrows · jump: W/space</span>
+      </div>
+      <canvas id="game" width="900" height="540" aria-label="NPP game canvas"></canvas>
+    </main>
+
+    <script>
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+
+      const physics = { gravity: 0.42, friction: 0.82, jumpVelocity: -9.5, playerSpeed: 0.78 };
+      const trapThickness = 16;
+      const levels = [
+        {
+          world: { w: 1800, h: 1120 },
+          spawn: { x: 80, y: 980 },
+          goal: { x: 1650, y: 210, r: 15 },
+          solids: [
+            { x: 0, y: 1080, w: 1800, h: 40 },
+            { x: 0, y: 0, w: 24, h: 1120 },
+            { x: 1776, y: 0, w: 24, h: 1120 },
+            { x: 80, y: 980, w: 260, h: 20 },
+            { x: 360, y: 920, w: 220, h: 18 },
+            { x: 560, y: 860, w: 200, h: 18 },
+            { x: 730, y: 780, w: 220, h: 18 },
+            { x: 920, y: 700, w: 200, h: 18 },
+            { x: 1140, y: 620, w: 210, h: 18 },
+            { x: 1360, y: 530, w: 220, h: 18 },
+            { x: 1510, y: 360, w: 170, h: 18 },
+            { x: 1430, y: 220, w: 22, h: 320 },
+            { x: 1588, y: 220, w: 22, h: 320 },
+            { x: 1280, y: 360, w: 200, h: 18 },
+            { x: 1040, y: 430, w: 160, h: 16 },
+            { x: 860, y: 500, w: 150, h: 16 },
+            { x: 700, y: 580, w: 150, h: 16 },
+            { x: 500, y: 660, w: 160, h: 16 },
+            { x: 300, y: 740, w: 150, h: 16 },
+            { x: 150, y: 820, w: 120, h: 16 },
+          ],
+          traps: [
+            { x: 360, y: 1064, w: 280, h: trapThickness, side: "up" },
+            { x: 730, y: 764, w: 220, h: trapThickness, side: "up" },
+            { x: 1140, y: 604, w: 210, h: trapThickness, side: "up" },
+            { x: 1510, y: 344, w: 170, h: trapThickness, side: "up" },
+            { x: 1280, y: 378, w: 200, h: trapThickness, side: "down" },
+            { x: 1430 - trapThickness, y: 240, w: trapThickness, h: 270, side: "right" },
+            { x: 1610, y: 240, w: trapThickness, h: 270, side: "left" },
+          ],
+          collectibles: [
+            { x: 640, y: 820, r: 9 },
+            { x: 1080, y: 570, r: 9 },
+            { x: 1510, y: 290, r: 9 },
+          ],
+        },
+        {
+          world: { w: 1800, h: 1120 },
+          spawn: { x: 130, y: 990 },
+          goal: { x: 1610, y: 180, r: 15 },
+          solids: [
+            { x: 0, y: 1080, w: 1800, h: 40 },
+            { x: 0, y: 0, w: 24, h: 1120 },
+            { x: 1776, y: 0, w: 24, h: 1120 },
+            { x: 80, y: 980, w: 220, h: 20 },
+            { x: 360, y: 980, w: 170, h: 20 },
+            { x: 600, y: 910, w: 140, h: 18 },
+            { x: 810, y: 840, w: 130, h: 18 },
+            { x: 980, y: 760, w: 140, h: 18 },
+            { x: 1170, y: 680, w: 150, h: 18 },
+            { x: 1370, y: 600, w: 170, h: 18 },
+            { x: 1550, y: 520, w: 140, h: 18 },
+            { x: 1560, y: 300, w: 18, h: 240 },
+            { x: 1410, y: 300, w: 18, h: 240 },
+            { x: 1080, y: 500, w: 230, h: 18 },
+            { x: 900, y: 430, w: 130, h: 18 },
+            { x: 720, y: 500, w: 130, h: 18 },
+            { x: 510, y: 590, w: 130, h: 18 },
+            { x: 330, y: 670, w: 130, h: 18 },
+            { x: 170, y: 740, w: 130, h: 18 },
+          ],
+          traps: [
+            { x: 560, y: 1064, w: 270, h: trapThickness, side: "up" },
+            { x: 1170, y: 664, w: 150, h: trapThickness, side: "up" },
+            { x: 1080, y: 518, w: 230, h: trapThickness, side: "down" },
+            { x: 720, y: 518, w: 130, h: trapThickness, side: "down" },
+            { x: 1410 - trapThickness, y: 320, w: trapThickness, h: 210, side: "right" },
+            { x: 1578, y: 320, w: trapThickness, h: 210, side: "left" },
+            { x: 900 - trapThickness, y: 448, w: trapThickness, h: 120, side: "right" },
+          ],
+          collectibles: [
+            { x: 920, y: 790, r: 9 },
+            { x: 1240, y: 630, r: 9 },
+            { x: 1440, y: 260, r: 9 },
+            { x: 380, y: 640, r: 9 },
+          ],
+        },
+      ];
+
+      const player = { x: 0, y: 0, w: 16, h: 20, vx: 0, vy: 0, grounded: false };
+      const camera = { x: 0, y: 0 };
+      const keys = new Set();
+      let levelIndex = 0;
+      let level = levels[levelIndex];
+      let deaths = 0;
+      let jumpConsumed = false;
+      let transitionTimer = 0;
+      let totalCollected = 0;
+      let deathExplosionTimer = 0;
+      const deathParticles = [];
+
+      function loadLevel(index) {
+        levelIndex = index % levels.length;
+        level = levels[levelIndex];
+        player.x = level.spawn.x;
+        player.y = level.spawn.y;
+        player.vx = 0;
+        player.vy = 0;
+        player.grounded = false;
+        jumpConsumed = false;
+        transitionTimer = 0;
+        deathExplosionTimer = 0;
+        deathParticles.length = 0;
+        level.collectibles.forEach((item) => (item.taken = false));
+      }
+
+      function resetPlayer() {
+        player.x = level.spawn.x;
+        player.y = level.spawn.y;
+        player.vx = 0;
+        player.vy = 0;
+        player.grounded = false;
+        jumpConsumed = false;
+      }
+
+      function triggerDeathExplosion() {
+        deaths += 1;
+        deathExplosionTimer = 28;
+        deathParticles.length = 0;
+        const cx = player.x + player.w / 2;
+        const cy = player.y + player.h / 2;
+        const count = 20;
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count;
+          const speed = 2.1 + Math.random() * 3.2;
+          deathParticles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 20 + Math.random() * 12,
+            size: 2 + Math.random() * 2.4,
+          });
+        }
+      }
+
+      function updateDeathExplosion() {
+        for (const p of deathParticles) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.97;
+          p.vy *= 0.97;
+          p.life -= 1;
+          if (p.size > 0.8) p.size *= 0.96;
+        }
+        for (let i = deathParticles.length - 1; i >= 0; i--) {
+          if (deathParticles[i].life <= 0) deathParticles.splice(i, 1);
+        }
+      }
+
+      function overlap(a, b) {
+        return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+      }
+
+      function detectWallContact() {
+        let left = false;
+        let right = false;
+        const epsilon = 1.5;
+        for (const solid of level.solids) {
+          const verticalOverlap = player.y < solid.y + solid.h && player.y + player.h > solid.y;
+          if (!verticalOverlap) continue;
+          if (Math.abs(player.x - (solid.x + solid.w)) <= epsilon) left = true;
+          if (Math.abs(player.x + player.w - solid.x) <= epsilon) right = true;
+          if (left && right) break;
+        }
+        return { left, right };
+      }
+
+      function collectCount() {
+        let remaining = 0;
+        for (const c of level.collectibles) if (!c.taken) remaining += 1;
+        return remaining;
+      }
+
+      function updatePlayer() {
+        if (transitionTimer > 0) {
+          transitionTimer -= 1;
+          if (transitionTimer === 0) loadLevel(levelIndex + 1);
+          return;
+        }
+        if (deathExplosionTimer > 0) {
+          deathExplosionTimer -= 1;
+          updateDeathExplosion();
+          if (deathExplosionTimer === 0) resetPlayer();
+          return;
+        }
+
+        const movingLeft = keys.has("ArrowLeft") || keys.has("a");
+        const movingRight = keys.has("ArrowRight") || keys.has("d");
+        const jump = keys.has("ArrowUp") || keys.has("w") || keys.has(" ");
+
+        if (movingLeft) player.vx -= physics.playerSpeed;
+        if (movingRight) player.vx += physics.playerSpeed;
+        player.vx *= physics.friction;
+        player.vx = Math.max(-5.3, Math.min(5.3, player.vx));
+
+        const wallContact = detectWallContact();
+        const canJump = player.grounded || wallContact.left || wallContact.right;
+        const wasGrounded = player.grounded;
+        if (jump && canJump && !jumpConsumed) {
+          player.vy = physics.jumpVelocity;
+          player.grounded = false;
+          jumpConsumed = true;
+          if (!wasGrounded && wallContact.left) player.vx = Math.max(player.vx, 4.8);
+          if (!wasGrounded && wallContact.right) player.vx = Math.min(player.vx, -4.8);
+        } else if (!jump) {
+          jumpConsumed = false;
+        }
+
+        player.vy += physics.gravity;
+        player.vy = Math.min(player.vy, 14);
+
+        player.x += player.vx;
+        for (const solid of level.solids) {
+          if (!overlap(player, solid)) continue;
+          if (player.vx > 0) player.x = solid.x - player.w;
+          if (player.vx < 0) player.x = solid.x + solid.w;
+          player.vx = 0;
+        }
+
+        player.y += player.vy;
+        player.grounded = false;
+        for (const solid of level.solids) {
+          if (!overlap(player, solid)) continue;
+          if (player.vy > 0) {
+            player.y = solid.y - player.h;
+            player.grounded = true;
+          } else if (player.vy < 0) {
+            player.y = solid.y + solid.h;
+          }
+          player.vy = 0;
+        }
+
+        for (const trap of level.traps) {
+          if (overlap(player, trap)) {
+            triggerDeathExplosion();
+            return;
+          }
+        }
+
+        for (const item of level.collectibles) {
+          if (item.taken) continue;
+          const cx = player.x + player.w / 2 - item.x;
+          const cy = player.y + player.h / 2 - item.y;
+          const r = item.r + 5;
+          if (cx * cx + cy * cy <= r * r) {
+            item.taken = true;
+            totalCollected += 1;
+          }
+        }
+
+        const allCollected = collectCount() === 0;
+        const gx = player.x + player.w / 2 - level.goal.x;
+        const gy = player.y + player.h / 2 - level.goal.y;
+        if (allCollected && gx * gx + gy * gy < level.goal.r * level.goal.r) transitionTimer = 70;
+      }
+
+      function drawTrap(trap) {
+        const teeth = trap.side === "left" || trap.side === "right" ? Math.max(2, Math.floor(trap.h / 10)) : Math.max(2, Math.floor(trap.w / 10));
+        const step = trap.side === "left" || trap.side === "right" ? trap.h / teeth : trap.w / teeth;
+        ctx.beginPath();
+        for (let i = 0; i < teeth; i++) {
+          if (trap.side === "up") {
+            const x = trap.x + i * step;
+            ctx.moveTo(x, trap.y + trap.h);
+            ctx.lineTo(x + step / 2, trap.y);
+            ctx.lineTo(x + step, trap.y + trap.h);
+          } else if (trap.side === "down") {
+            const x = trap.x + i * step;
+            ctx.moveTo(x, trap.y);
+            ctx.lineTo(x + step / 2, trap.y + trap.h);
+            ctx.lineTo(x + step, trap.y);
+          } else if (trap.side === "left") {
+            const y = trap.y + i * step;
+            ctx.moveTo(trap.x, y);
+            ctx.lineTo(trap.x + trap.w, y + step / 2);
+            ctx.lineTo(trap.x, y + step);
+          } else {
+            const y = trap.y + i * step;
+            ctx.moveTo(trap.x + trap.w, y);
+            ctx.lineTo(trap.x, y + step / 2);
+            ctx.lineTo(trap.x + trap.w, y + step);
+          }
+        }
+        ctx.fill();
+      }
+
+      function drawWooven(item) {
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, item.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, item.r - 1.5, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillStyle = "#000";
+        ctx.font = `${Math.max(10, item.r * 1.7)}px monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("w", item.x, item.y + 1);
+        ctx.restore();
+        ctx.fillStyle = "#fff";
+      }
+
+      function drawPlayer() {
+        const cx = player.x + player.w / 2;
+        const top = player.y + 1;
+        const moveIntensity = Math.min(1, Math.abs(player.vx) / 5.3);
+        const swing = Math.sin(performance.now() * 0.018) * (2.2 + moveIntensity * 3);
+
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#fff";
+        ctx.fillStyle = "#fff";
+        ctx.lineCap = "round";
+
+        ctx.beginPath();
+        ctx.arc(cx, top + 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, top + 8);
+        ctx.lineTo(cx, top + 15);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 4, top + 11);
+        ctx.lineTo(cx + 4, top + 11);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, top + 15);
+        ctx.lineTo(cx - 4 + swing, top + 20);
+        ctx.moveTo(cx, top + 15);
+        ctx.lineTo(cx + 4 - swing, top + 20);
+        ctx.stroke();
+      }
+
+      function updateCamera() {
+        const targetX = player.x + player.w / 2 - canvas.width / 2;
+        const targetY = player.y + player.h / 2 - canvas.height / 2;
+        camera.x = Math.max(0, Math.min(targetX, level.world.w - canvas.width));
+        camera.y = Math.max(0, Math.min(targetY, level.world.h - canvas.height));
+      }
+
+      function draw() {
+        updateCamera();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+
+        ctx.save();
+        ctx.translate(-camera.x, -camera.y);
+
+        for (const solid of level.solids) ctx.fillRect(solid.x, solid.y, solid.w, solid.h);
+        for (const trap of level.traps) drawTrap(trap);
+        for (const item of level.collectibles) if (!item.taken) drawWooven(item);
+        ctx.fillStyle = "#ff3399";
+        for (const p of deathParticles) ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+        ctx.fillStyle = "#fff";
+
+        const unlocked = collectCount() === 0;
+        ctx.beginPath();
+        ctx.arc(level.goal.x, level.goal.y, level.goal.r, 0, Math.PI * 2);
+        if (unlocked) {
+          ctx.fill();
+        } else {
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        if (deathExplosionTimer === 0) drawPlayer();
+        ctx.restore();
+
+        ctx.font = "15px monospace";
+        ctx.fillText(`L${levelIndex + 1}/${levels.length}`, 24, 30);
+        ctx.fillText(`DEATHS ${deaths}`, 130, 30);
+        ctx.fillText(`WOOVENS ${level.collectibles.length - collectCount()}/${level.collectibles.length}`, 290, 30);
+        ctx.fillText(`TOTAL ${totalCollected}`, 560, 30);
+        if (transitionTimer > 0) ctx.fillText("LEVEL CLEAR", 740, 30);
+        if (deathExplosionTimer > 0) {
+          ctx.fillStyle = "#ff3399";
+          ctx.fillText("BOOM", 780, 30);
+          ctx.fillStyle = "#fff";
+        }
+      }
+
+      function tick() {
+        updatePlayer();
+        draw();
+        requestAnimationFrame(tick);
+      }
+
+      window.addEventListener("keydown", (event) => {
+        const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+        keys.add(key);
+        if (event.key === "r" || event.key === "R") loadLevel(levelIndex);
+      });
+
+      window.addEventListener("keyup", (event) => {
+        const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+        keys.delete(key);
+      });
+
+      loadLevel(0);
+      tick();
+    </script>
+  </body>
+</html>
