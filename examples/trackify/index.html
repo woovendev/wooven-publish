@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trackify — Time Tracker</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span> Trackify
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-view="tracker">Tracker</button>
+      <button class="tab" data-view="analytics">Analytics</button>
+    </nav>
+    <div class="topbar-actions">
+      <button id="exportJson" class="btn ghost" title="Download a JSON backup">Export</button>
+      <button id="exportCsv" class="btn ghost" title="Download CSV">CSV</button>
+      <label class="btn ghost" title="Restore from a JSON backup">
+        Import<input id="importJson" type="file" accept="application/json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <!-- ============ TRACKER VIEW ============ -->
+  <main id="view-tracker" class="view active">
+    <section class="card timer-card">
+      <form id="entryForm" class="entry-form" autocomplete="off">
+        <div class="field grow">
+          <label>Project</label>
+          <input id="f-project" list="projects" placeholder="e.g. Website Redesign" />
+          <datalist id="projects"></datalist>
+        </div>
+        <div class="field grow">
+          <label>Customer / Company</label>
+          <input id="f-customer" list="customers" placeholder="e.g. Acme Inc." />
+          <datalist id="customers"></datalist>
+        </div>
+        <div class="field grow-2">
+          <label>Task <span id="taskCount" class="muted">0/300</span></label>
+          <input id="f-task" maxlength="300" placeholder="What are you working on?" />
+        </div>
+        <div class="field rate-field">
+          <label>Rate /h</label>
+          <input id="f-rate" type="number" min="0" step="1" placeholder="0" />
+        </div>
+        <div class="field billable-field">
+          <label>Billable</label>
+          <button type="button" id="f-billable" class="toggle on" aria-pressed="true">$</button>
+        </div>
+        <div class="timer-display">
+          <span id="liveTimer">00:00:00</span>
+        </div>
+        <button type="button" id="startStop" class="btn primary big">Start</button>
+      </form>
+      <div class="notes-row">
+        <input id="f-notes" placeholder="Notes (optional)" />
+        <button type="button" id="manualAdd" class="btn ghost" title="Add a past entry manually">+ Manual entry</button>
+      </div>
+    </section>
+
+    <section class="entries">
+      <div class="entries-head">
+        <h2>Entries</h2>
+        <div class="summary" id="trackerSummary"></div>
+      </div>
+      <div id="entriesList" class="entries-list"></div>
+      <p id="emptyState" class="empty">No entries yet. Hit Start to track your first one.</p>
+    </section>
+  </main>
+
+  <!-- ============ ANALYTICS VIEW ============ -->
+  <main id="view-analytics" class="view">
+    <section class="card">
+      <div class="range-bar">
+        <button class="chip active" data-range="today">Today</button>
+        <button class="chip" data-range="week">This Week</button>
+        <button class="chip" data-range="month">This Month</button>
+        <button class="chip" data-range="all">All Time</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat"><span class="stat-label">Total Time</span><span id="statTime" class="stat-val">0h 0m</span></div>
+        <div class="stat"><span class="stat-label">Billable</span><span id="statBillable" class="stat-val">0h 0m</span></div>
+        <div class="stat"><span class="stat-label">Earnings</span><span id="statEarnings" class="stat-val">$0</span></div>
+        <div class="stat"><span class="stat-label">Entries</span><span id="statEntries" class="stat-val">0</span></div>
+      </div>
+    </section>
+    <div class="analytics-cols">
+      <section class="card">
+        <h3>By Project</h3>
+        <div id="byProject" class="bars"></div>
+      </section>
+      <section class="card">
+        <h3>By Customer</h3>
+        <div id="byCustomer" class="bars"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ============ EDIT MODAL ============ -->
+  <div id="modal" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="modalTitle">Edit entry</h3>
+      <div class="modal-grid">
+        <label>Project<input id="m-project" /></label>
+        <label>Customer<input id="m-customer" /></label>
+        <label class="full">Task<input id="m-task" maxlength="300" /></label>
+        <label class="full">Notes<input id="m-notes" /></label>
+        <label>Start<input id="m-start" type="datetime-local" /></label>
+        <label>Stop<input id="m-stop" type="datetime-local" /></label>
+        <label>Rate /h<input id="m-rate" type="number" min="0" step="1" /></label>
+        <label class="inline">Billable<input id="m-billable" type="checkbox" /></label>
+      </div>
+      <div class="modal-actions">
+        <button id="m-delete" class="btn danger">Delete</button>
+        <span class="spacer"></span>
+        <button id="m-cancel" class="btn ghost">Cancel</button>
+        <button id="m-save" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
