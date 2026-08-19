@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lattice</title>
+  <meta name="description" content="Local-first block workspace. Pages, databases, personas, work tracking.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M8 20V12l8-4 8 4v8l-8 4-8-4z' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3C/svg%3E">
+  <script>
+    try {
+      var t = localStorage.getItem("lattice:theme");
+      if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="./styles.css?v=5">
+</head>
+<body>
+  <div id="banner" class="banner" hidden></div>
+  <div id="app">
+    <aside id="sidebar" aria-label="Sidebar"></aside>
+    <main id="canvas" aria-label="Canvas"></main>
+    <aside id="comments" aria-label="Comments"></aside>
+  </div>
+  <div id="overlays"></div>
+  <script type="module" src="./app.js?v=5"></script>
+</body>
+</html>
