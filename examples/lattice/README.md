@@ -28,6 +28,8 @@ wooven-publish ./examples/lattice --client cursor
 
 The CLI prints `live at https://{slug}.wooven.dev/` — that URL is the site. Anonymous publishes expire in 24 hours; use the printed claim URL to keep them. Re-publish with `--slug <slug>` only if a claim token is already cached.
 
+Wooven CDN caches `.js` / `.css` for four hours on a given URL. Lattice appends `?v=` on scripts, styles, and module imports so a new deploy is not stuck behind that cache. Bump the `v` query when shipping a fix to an existing slug.
+
 `index.html` must stay at this folder’s root. Only static files (`html`, `css`, `js`, `md`, …). Relative ES module imports (`./app.js`, `./store.js`) are required so hosting with `X-Content-Type-Options: nosniff` still boots.
 
 Live URL: https://ivory-pine-z7gm79.wooven.dev/

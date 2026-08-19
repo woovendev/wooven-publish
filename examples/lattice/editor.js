@@ -5,8 +5,8 @@ import {
   createPage, createBlock, createComment, createDatabase, createProperty, createView,
   appendBlock, insertBlockAfter, removeBlock, moveBlock, pageBlocks, commentCount,
   commentsForBlock, mentionHandles, pushActivity, TASK_PROP, PROJECT_PROP,
-} from "./model.js";
-import { mutate, toast } from "./store.js";
+} from "./model.js?v=3";
+import { mutate, toast } from "./store.js?v=3";
 
 const SLASH_ITEMS = [
   { t: "paragraph", label: "Paragraph", hint: "text" },

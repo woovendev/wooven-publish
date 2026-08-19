@@ -5,14 +5,14 @@ import {
   breadcrumbs, searchPages, createPage, createBlock, createPersona, appendBlock,
   initialsFrom, now, archivePage, resolveWikiTitle, pushActivity, mentionHandles,
   dbByPageId,
-} from "./model.js";
+} from "./model.js?v=3";
 import {
   load, getWorkspace, subscribe, getBanner, clearBanner, mutate, toast,
   downloadJSON, importJSON, exportCSV, downloadCSV, resetToDemo, undo, importCSV,
-} from "./store.js";
-import { renderPage, renderComments, slashHtml, slashIndexClick, applySlash, getSlash, closeSlash, renderInline, esc } from "./editor.js";
-import { renderDatabase, renderProps, renderMyWork, renderWorkload, renderReport } from "./views.js";
-import { myWork, workload, report, tasksByPersona } from "./work.js";
+} from "./store.js?v=3";
+import { renderPage, renderComments, slashHtml, slashIndexClick, applySlash, getSlash, closeSlash, renderInline, esc } from "./editor.js?v=3";
+import { renderDatabase, renderProps, renderMyWork, renderWorkload, renderReport } from "./views.js?v=3";
+import { myWork, workload, report, tasksByPersona } from "./work.js?v=3";
 
 const $ = (sel, el = document) => el.querySelector(sel);
 
@@ -173,6 +173,7 @@ function renderSidebar(ws) {
       </button>`).join("")}
     </div>
     <div class="side-foot">
+      <button class="btn" data-theme>${currentTheme() === "dark" ? "Light mode" : "Dark mode"}</button>
       <button class="btn ghost" data-cmd>⌘K Jump</button>
       <button class="btn ghost" data-export>Export</button>
       <button class="btn ghost" data-import>Import</button>

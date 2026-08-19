@@ -98,7 +98,7 @@ body {
 }
 .ws-name {
   font: 600 15px/1.2 var(--sans);
-  border: 0; background: transparent; width: 100%; color: var(--ink);
+  border: 0; background: transparent; flex: 1; min-width: 0; width: auto; color: var(--ink);
 }
 .search, select, input, textarea, .title-in, .icon-in {
   font: inherit; color: inherit;
