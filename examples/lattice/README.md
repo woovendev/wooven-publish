@@ -30,7 +30,9 @@ The CLI prints `live at https://{slug}.wooven.dev/` — that URL is the site. An
 
 `index.html` must stay at this folder’s root. Only static files (`html`, `css`, `js`, `md`, …). Relative ES module imports (`./app.js`, `./store.js`) are required so hosting with `X-Content-Type-Options: nosniff` still boots.
 
-Live URL (filled after publish): _pending first publish_
+Live URL: https://ivory-pine-z7gm79.wooven.dev/
+
+Anonymous TTL 24h from publish. Claim: https://wooven.dev/claim?slug=ivory-pine-z7gm79
 
 `localhost:8766` and `https://{slug}.wooven.dev` are different origins, so they have **separate** `localStorage` workspaces. First visit to a new origin seeds the Studio demo.
 
