@@ -5,13 +5,13 @@ import {
   getPage, getPersona, getProp, setProp, asIdList, dbByPageId, dbRows,
   propById, now, createPage, createBlock, appendBlock, archivePage,
   blockedByPages, childTasks, taskProgress, tasksForProject, setBlocking,
-} from "./model.js?v=4";
-import { mutate } from "./store.js?v=4";
-import { esc, renderInline } from "./editor.js?v=4";
+} from "./model.js?v=5";
+import { mutate } from "./store.js?v=5";
+import { esc, renderInline } from "./editor.js?v=5";
 import {
   dueOf, startOf, taskStatus, assigneesOf, ownerOf, blockerLabel, progressLabel,
   setStatus, isOverdue, isOpenTask, createTask, createProject,
-} from "./work.js?v=4";
+} from "./work.js?v=5";
 
 export function renderDatabase(root, ws, page, ctx) {
   const db = dbByPageId(ws, page.id);

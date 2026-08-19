@@ -4,7 +4,7 @@ import {
   TASK_PROP, PROJECT_PROP, TASK_STATUSES, PROJECT_STATUSES, PRIORITIES, RECURRENCE,
   todayISO, addDays, now, createWorkspace, createPersona, createPage, createBlock,
   createComment, createDatabase, createProperty, createView, createEvent, appendBlock,
-} from "./model.js?v=4";
+} from "./model.js?v=5";
 
 export function studio() {
   const t = now();

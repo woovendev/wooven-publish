@@ -133,6 +133,67 @@ body {
   margin-top: 8px;
 }
 .tree { overflow: auto; flex: 1; }
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+  border-radius: 6px;
+  user-select: none;
+}
+.tree-handle {
+  flex: none;
+  width: 14px;
+  color: var(--muted);
+  opacity: 0;
+  cursor: grab;
+  font-size: 10px;
+  letter-spacing: -1px;
+  user-select: none;
+  line-height: 1;
+}
+.tree-item:hover .tree-handle, .tree-item:focus-within .tree-handle { opacity: 1; }
+.tree-btn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-del {
+  flex: none;
+  opacity: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 16px;
+  line-height: 1;
+}
+.tree-item:hover .tree-del, .tree-item:focus-within .tree-del { opacity: 1; }
+.tree-del:hover { color: var(--danger); background: var(--danger-bg); }
+.tree-item.dragging { opacity: 0.4; }
+.tree-item.drop-into { background: var(--accent-soft); }
+.tree-item.drop-before::before,
+.tree-item.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--accent);
+}
+.tree-item.drop-before::before { top: 0; }
+.tree-item.drop-after::after { bottom: 0; }
+.tree-root-drop {
+  display: none;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.tree.is-dragging .tree-root-drop { display: block; }
+.tree-root-drop.drop-into { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .personas { display: grid; gap: 2px; }
 .dot {
   width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none;
@@ -204,6 +265,11 @@ body {
 .block-body { min-height: 1.5em; padding: 3px 4px; border-radius: 4px; }
 .block-body:focus-within { outline: 1px solid var(--accent-soft); }
 .edit { min-height: 1.4em; outline: none; white-space: pre-wrap; }
+.edit.is-blank::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
 .heading1 .edit { font-size: 1.7em; font-weight: 650; letter-spacing: -0.03em; }
 .heading2 .edit { font-size: 1.3em; font-weight: 650; }
 .heading3 .edit { font-size: 1.1em; font-weight: 650; }

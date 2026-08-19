@@ -1,7 +1,7 @@
 /** Lattice store: load/save/import/export/migrate. One localStorage key. */
 
-import { SCHEMA_VERSION, clone, now, validate, createWorkspace } from "./model.js?v=4";
-import { studio } from "./seed.js?v=4";
+import { SCHEMA_VERSION, clone, now, validate, createWorkspace } from "./model.js?v=5";
+import { studio } from "./seed.js?v=5";
 
 export const STORAGE_KEY = "lattice:v1";
 

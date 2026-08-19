@@ -4,15 +4,15 @@ import {
   getPage, getPersona, getPersonaByHandle, wikiPages, rootPages, childPages,
   breadcrumbs, searchPages, createPage, createBlock, createPersona, appendBlock,
   initialsFrom, now, archivePage, resolveWikiTitle, pushActivity, mentionHandles,
-  dbByPageId,
-} from "./model.js?v=4";
+  dbByPageId, movePage, isDbRow,
+} from "./model.js?v=5";
 import {
   load, getWorkspace, subscribe, getBanner, clearBanner, mutate, toast,
   downloadJSON, importJSON, exportCSV, downloadCSV, resetToDemo, undo, importCSV,
-} from "./store.js?v=4";
-import { renderPage, renderComments, slashHtml, slashIndexClick, applySlash, getSlash, closeSlash, renderInline, esc } from "./editor.js?v=4";
-import { renderDatabase, renderProps, renderMyWork, renderWorkload, renderReport } from "./views.js?v=4";
-import { myWork, workload, report, tasksByPersona } from "./work.js?v=4";
+} from "./store.js?v=5";
+import { renderPage, renderComments, slashHtml, slashIndexClick, applySlash, getSlash, closeSlash, renderInline, esc } from "./editor.js?v=5";
+import { renderDatabase, renderProps, renderMyWork, renderWorkload, renderReport } from "./views.js?v=5";
+import { myWork, workload, report, tasksByPersona } from "./work.js?v=5";
 
 const $ = (sel, el = document) => el.querySelector(sel);
 
@@ -141,12 +141,15 @@ function renderBanner() {
   el.innerHTML = `<span>${esc(b.text)}</span><button class="btn ghost" data-dismiss>Dismiss</button>`;
 }
 
+let dragPageId = null;
+let justDropped = false;
+
 function renderSidebar(ws) {
   const acting = getPersona(ws, ws.actingPersonaId);
-  const q = ui.search.trim().toLowerCase();
-  const tree = q
-    ? wikiPages(ws).filter((p) => p.title.toLowerCase().includes(q))
-    : rootPages(ws);
+  const searchEl = $("#sidebar .search");
+  const keepSearch = document.activeElement === searchEl;
+  const selStart = searchEl?.selectionStart;
+  const selEnd = searchEl?.selectionEnd;
   $("#sidebar").innerHTML = `
     <div class="brand">
       <span class="mark"></span>
@@ -165,7 +168,7 @@ function renderSidebar(ws) {
       <button data-go="report" class="${route.kind === "report" ? "on" : ""}">Report</button>
     </nav>
     <div class="side-label">Pages</div>
-    <div class="tree">${tree.map((p) => treeItem(ws, p, 0, q)).join("")}</div>
+    <div class="tree"></div>
     <div class="side-label">Personas <button class="btn ghost mini" data-new-persona>+</button></div>
     <div class="personas">
       ${ws.personas.filter((p) => !p.archived).map((p) => `<button class="persona${route.kind === "persona" && route.id === p.id ? " on" : ""}" data-persona="${p.id}">
@@ -183,15 +186,25 @@ function renderSidebar(ws) {
   $("#sidebar .ws-name").onchange = (e) => mutate((w) => { w.name = e.target.value.trim() || w.name; });
   $("#sidebar .search").oninput = (e) => {
     ui.search = e.target.value;
-    renderSidebar(getWorkspace());
+    paintTree(getWorkspace());
   };
   $("#sidebar [data-acting]").onchange = (e) => mutate((w) => { w.actingPersonaId = e.target.value; });
   $("#sidebar").onclick = (e) => {
     if (e.target.closest("[data-theme-toggle]")) return toggleTheme();
+    const del = e.target.closest("[data-del-page]");
+    if (del) {
+      e.preventDefault();
+      e.stopPropagation();
+      deleteWikiPage(del.dataset.delPage);
+      return;
+    }
     const goBtn = e.target.closest("[data-go]");
     if (goBtn) return go({ kind: goBtn.dataset.go });
     const pageBtn = e.target.closest("[data-page]");
-    if (pageBtn) return go({ kind: "page", id: pageBtn.dataset.page });
+    if (pageBtn) {
+      if (justDropped) return;
+      return go({ kind: "page", id: pageBtn.dataset.page });
+    }
     const per = e.target.closest("[data-persona]");
     if (per) return go({ kind: "persona", id: per.dataset.persona });
     if (e.target.closest("[data-new-persona]")) return openPersonaEdit(null);
@@ -210,15 +223,155 @@ function renderSidebar(ws) {
       if (confirm("Replace the current workspace with the Studio demo?")) resetToDemo();
     }
   };
+  bindTreeDnD($("#sidebar .tree"));
+  paintTree(ws);
+  if (keepSearch) {
+    const next = $("#sidebar .search");
+    next.focus();
+    if (selStart != null) next.setSelectionRange(selStart, selEnd);
+  }
   void acting;
+}
+
+function treeHtml(ws) {
+  const q = ui.search.trim().toLowerCase();
+  const tree = q
+    ? wikiPages(ws).filter((p) => p.title.toLowerCase().includes(q))
+    : rootPages(ws);
+  const rootDrop = q ? "" : `<div class="tree-root-drop" data-drop-root>Drop here to un-nest</div>`;
+  return rootDrop + tree.map((p) => treeItem(ws, p, 0, q)).join("");
+}
+
+function paintTree(ws) {
+  const el = $("#sidebar .tree");
+  if (!el) return;
+  el.innerHTML = treeHtml(ws);
+  el.classList.toggle("is-flat", !!ui.search.trim());
 }
 
 function treeItem(ws, page, depth, flattening) {
   const kids = flattening ? [] : childPages(ws, page.id);
   const on = route.kind === "page" && route.id === page.id;
-  return `<div class="tree-item" style="padding-left:${8 + depth * 12}px">
+  return `<div class="tree-item" data-tree-id="${page.id}" draggable="${flattening ? "false" : "true"}" style="padding-left:${8 + depth * 12}px">
+    <span class="tree-handle" title="Drag to nest or reorder" aria-hidden="true">⋮⋮</span>
     <button class="tree-btn${on ? " on" : ""}" data-page="${page.id}">${esc(page.icon || "·")} ${esc(page.title)}</button>
+    <button class="tree-del" type="button" data-del-page="${page.id}" title="Delete page" aria-label="Delete ${esc(page.title)}">×</button>
   </div>${kids.map((k) => treeItem(ws, k, depth + 1, flattening)).join("")}`;
+}
+
+function dropWhere(e, el) {
+  const r = el.getBoundingClientRect();
+  const y = (e.clientY - r.top) / Math.max(r.height, 1);
+  if (y < 0.28) return "before";
+  if (y > 0.72) return "after";
+  return "into";
+}
+
+function clearDropMarks(tree) {
+  tree.querySelectorAll(".drop-into, .drop-before, .drop-after").forEach((el) => {
+    el.classList.remove("drop-into", "drop-before", "drop-after");
+  });
+}
+
+function bindTreeDnD(tree) {
+  tree.ondragstart = (e) => {
+    if (tree.classList.contains("is-flat")) {
+      e.preventDefault();
+      return;
+    }
+    if (e.target.closest("[data-del-page]")) {
+      e.preventDefault();
+      return;
+    }
+    const item = e.target.closest("[data-tree-id]");
+    if (!item) return;
+    dragPageId = item.dataset.treeId;
+    e.dataTransfer.setData("text/plain", dragPageId);
+    e.dataTransfer.effectAllowed = "move";
+    item.classList.add("dragging");
+    tree.classList.add("is-dragging");
+  };
+  tree.ondragend = () => {
+    dragPageId = null;
+    tree.classList.remove("is-dragging");
+    tree.querySelectorAll(".dragging").forEach((el) => el.classList.remove("dragging"));
+    clearDropMarks(tree);
+  };
+  tree.ondragover = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    clearDropMarks(tree);
+    const root = e.target.closest("[data-drop-root]");
+    if (root) {
+      root.classList.add("drop-into");
+      return;
+    }
+    const item = e.target.closest("[data-tree-id]");
+    const id = dragPageId || e.dataTransfer.getData("text/plain");
+    if (!item || item.dataset.treeId === id) return;
+    item.classList.add(`drop-${dropWhere(e, item)}`);
+  };
+  tree.ondrop = (e) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text/plain") || dragPageId;
+    const root = e.target.closest("[data-drop-root]");
+    const item = e.target.closest("[data-tree-id]");
+    clearDropMarks(tree);
+    tree.classList.remove("is-dragging");
+    if (!id) return;
+    justDropped = true;
+    setTimeout(() => { justDropped = false; }, 0);
+    try {
+      if (root) mutate((w) => movePage(w, id, null, "root"));
+      else if (item && item.dataset.treeId !== id) {
+        mutate((w) => movePage(w, id, item.dataset.treeId, dropWhere(e, item)));
+      }
+    } catch (err) {
+      toast("error", err.message);
+    }
+  };
+}
+
+function pageIsUnder(ws, pageId, ancestorId) {
+  let cur = getPage(ws, pageId);
+  const seen = new Set();
+  while (cur?.parentPageId && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    if (cur.parentPageId === ancestorId) return true;
+    cur = getPage(ws, cur.parentPageId);
+  }
+  return false;
+}
+
+function descendantWikiCount(ws, id) {
+  let n = 0;
+  for (const c of childPages(ws, id)) n += 1 + descendantWikiCount(ws, c.id);
+  return n;
+}
+
+function deleteWikiPage(id) {
+  const ws = getWorkspace();
+  const page = getPage(ws, id);
+  if (!page || page.archived) return;
+  const kids = descendantWikiCount(ws, id);
+  const label = kids
+    ? `Delete “${page.title}” and ${kids} nested page(s)? This archives them.`
+    : `Delete “${page.title}”? This archives the page.`;
+  if (!confirm(label)) return;
+  const parentId = page.parentPageId;
+  const leaving = route.kind === "page" && (route.id === id || pageIsUnder(ws, route.id, id));
+  mutate((w) => archivePage(w, getPage(w, id)));
+  if (!leaving) return;
+  const nextWs = getWorkspace();
+  const parent = parentId ? getPage(nextWs, parentId) : null;
+  const home = getPage(nextWs, "page-home");
+  const fallback = (parent && !parent.archived && (parent.type === "database" || !isDbRow(nextWs, parent)))
+    ? parent
+    : (home && !home.archived)
+      ? home
+      : wikiPages(nextWs)[0];
+  if (fallback) go({ kind: "page", id: fallback.id });
+  else go({ kind: "my-work" });
 }
 
 function renderCanvas(ws) {
@@ -271,6 +424,7 @@ function renderCanvas(ws) {
       <input class="icon-in" value="${esc(page.icon || "")}" maxlength="4" title="Icon">
       <input class="title-in" value="${esc(page.title)}" placeholder="Untitled">
       <button class="btn ghost" data-new-child>+ Page</button>
+      <button class="btn ghost danger" data-del-page="${page.id}">Delete</button>
     </header>
     <div id="props"></div>
     <div id="page-body" class="page-body"></div>`;
@@ -292,6 +446,7 @@ function renderCanvas(ws) {
     });
     go({ kind: "page", id });
   };
+  main.querySelector("[data-del-page]").onclick = () => deleteWikiPage(page.id);
   main.querySelector(".crumbs").onclick = (e) => {
     const open = e.target.closest("[data-open]");
     if (open) ctx.openPage(open.dataset.open);

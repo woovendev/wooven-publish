@@ -5,8 +5,8 @@ import {
   createPage, createBlock, createComment, createDatabase, createProperty, createView,
   appendBlock, insertBlockAfter, removeBlock, moveBlock, pageBlocks, commentCount,
   commentsForBlock, mentionHandles, pushActivity, TASK_PROP, PROJECT_PROP,
-} from "./model.js?v=4";
-import { mutate, toast } from "./store.js?v=4";
+} from "./model.js?v=5";
+import { mutate, toast } from "./store.js?v=5";
 
 const SLASH_ITEMS = [
   { t: "paragraph", label: "Paragraph", hint: "text" },
@@ -48,7 +48,7 @@ export function renderInline(raw, ws) {
   s = s.replace(/\[\[([^[\]]+)\]\]/g, (_, title) => wikiHtml(ws, title));
   s = s.replace(/@([a-zA-Z0-9_]+)/g, (_, h) => mentionHtml(ws, h));
   s = s.replace(/\0H(\d+)\0/g, (_, i) => holes[Number(i)]);
-  return s || "<span class=ph>Empty</span>";
+  return s;
 }
 
 function wikiHtml(ws, title) {
@@ -69,6 +69,7 @@ function serialize(node) {
   if (node.nodeType !== 1) return "";
   const tag = node.tagName;
   if (tag === "BR") return "\n";
+  if (node.classList?.contains("ph")) return "";
   const inner = [...node.childNodes].map(serialize).join("");
   if (node.dataset?.wiki) return `[[${node.dataset.wiki}]]`;
   if (node.dataset?.handle) return `@${node.dataset.handle}`;
@@ -184,11 +185,19 @@ function renderBody(ws, block) {
   }
   if (t === "todo") {
     const on = block.props.checked ? "on" : "";
-    return `<div class="block-body todo-row"><button class="chk ${on}" data-chk="${block.id}" aria-pressed="${!!block.props.checked}"></button><div class="edit" data-edit="${block.id}" contenteditable="true" spellcheck="true">${renderInline(block.content, ws)}</div></div>`;
+    const text = editableText(block);
+    return `<div class="block-body todo-row"><button class="chk ${on}" data-chk="${block.id}" aria-pressed="${!!block.props.checked}"></button><div class="edit${text ? "" : " is-blank"}" data-edit="${block.id}" data-placeholder="To-do" contenteditable="true" spellcheck="true">${text ? renderInline(text, ws) : ""}</div></div>`;
   }
   const emoji = t === "callout" ? `<span class="co-emoji">${esc(block.props.emoji || "✦")}</span>` : "";
   const lang = t === "code" ? `<span class="lang">${esc(block.props.lang || "")}</span>` : "";
-  return `<div class="block-body ${t}">${emoji}${lang}<div class="edit" data-edit="${block.id}" contenteditable="true" spellcheck="true">${block.content ? renderInline(block.content, ws) : ""}</div></div>`;
+  const text = editableText(block);
+  return `<div class="block-body ${t}">${emoji}${lang}<div class="edit${text ? "" : " is-blank"}" data-edit="${block.id}" data-placeholder="Type / for commands" contenteditable="true" spellcheck="true">${text ? renderInline(text, ws) : ""}</div></div>`;
+}
+
+function editableText(block) {
+  const c = String(block.content || "");
+  if (block.type === "todo" && c === "Empty") return "";
+  return c;
 }
 
 function bind(root, ws, page, ctx) {
@@ -350,12 +359,15 @@ function onEditInput(edit, page, ctx) {
       b.updatedAt = now();
     }
   }, { silent: !converted && !(md.startsWith("[ ]") || false) });
+  const blank = !md.trim();
+  edit.classList.toggle("is-blank", blank);
   requestAnimationFrame(() => {
     const el = document.querySelector(`[data-edit="${id}"]`);
     if (!el) return;
     if (converted) setCaret(el, converted.content.length);
     else {
-      el.innerHTML = md ? renderInline(md, ctx.ws()) : "";
+      el.innerHTML = blank ? "" : renderInline(md, ctx.ws());
+      el.classList.toggle("is-blank", blank);
       setCaret(el, off);
     }
     if (slash) ctx.redrawOverlays?.();
@@ -383,7 +395,8 @@ function convertPrefix(md) {
     return { type: "bullet", content: md.replace(/^(\*|-)\s/, "") };
   }
   if (/^\[\]\s?/.test(md) || /^\[ \]\s?/.test(md)) {
-    return { type: "todo", content: md.replace(/^\[ \]?\s?/, ""), props: { checked: false } };
+    const content = md.replace(/^\[\]\s?/, "").replace(/^\[ \]\s?/, "");
+    return { type: "todo", content: content === "Empty" ? "" : content, props: { checked: false } };
   }
   if (/^\d+\.\s/.test(md)) return { type: "numbered", content: md.replace(/^\d+\.\s/, "") };
   return null;

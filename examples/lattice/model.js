@@ -510,7 +510,47 @@ export function archivePage(ws, page) {
   page.archived = true;
   page.updatedAt = now();
   for (const child of ws.pages.filter((p) => p.parentPageId === page.id && !p.archived)) {
-    if (isDbRow(ws, child) || child.type === "page") archivePage(ws, child);
+    archivePage(ws, child);
+  }
+}
+
+export function canReparent(ws, pageId, newParentId) {
+  if (!newParentId) return true;
+  if (pageId === newParentId) return false;
+  let cur = getPage(ws, newParentId);
+  const seen = new Set();
+  while (cur && !seen.has(cur.id)) {
+    if (cur.id === pageId) return false;
+    seen.add(cur.id);
+    cur = cur.parentPageId ? getPage(ws, cur.parentPageId) : null;
+  }
+  return true;
+}
+
+/** where: "into" | "before" | "after" | "root" */
+export function movePage(ws, pageId, targetId, where) {
+  const page = getPage(ws, pageId);
+  if (!page) return;
+  let newParentId = null;
+  if (where === "root") newParentId = null;
+  else {
+    const target = getPage(ws, targetId);
+    if (!target) return;
+    newParentId = where === "into" ? target.id : target.parentPageId;
+  }
+  if (!canReparent(ws, pageId, newParentId)) {
+    throw new Error("Can't nest a page inside itself.");
+  }
+  page.parentPageId = newParentId;
+  page.updatedAt = now();
+  const rest = ws.pages.filter((p) => p.id !== pageId);
+  if ((where === "before" || where === "after") && targetId) {
+    const i = rest.findIndex((p) => p.id === targetId);
+    rest.splice(Math.max(0, i) + (where === "after" ? 1 : 0), 0, page);
+    ws.pages = rest;
+  } else {
+    rest.push(page);
+    ws.pages = rest;
   }
 }
 
