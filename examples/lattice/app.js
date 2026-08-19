@@ -26,7 +26,29 @@ let ui = {
   focusedBlock: null,
   viewId: null,
   personaFilter: null,
+  viewByPage: {},
+  filterByPage: {},
 };
+
+const THEME_KEY = "lattice:theme";
+
+function currentTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === "dark" || saved === "light") return saved;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyTheme(theme = currentTheme()) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+}
+
+function toggleTheme() {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+  renderSidebar(getWorkspace());
+}
 
 function parseHash() {
   const h = (location.hash || "#/page/page-home").slice(1);
@@ -41,7 +63,8 @@ function parseHash() {
 
 function go(next) {
   route = next;
-  ui.viewId = null;
+  ui.viewId = next.kind === "page" ? (ui.viewByPage[next.id] || null) : null;
+  ui.personaFilter = next.kind === "page" ? (ui.filterByPage[next.id] || null) : null;
   ui.focusedBlock = null;
   const hash =
     next.kind === "page" ? `#/page/${next.id}`
@@ -52,6 +75,8 @@ function go(next) {
 }
 
 const ctx = {
+  get viewId() { return ui.viewId; },
+  get personaFilter() { return ui.personaFilter; },
   openPage: (id) => go({ kind: "page", id }),
   openPersona: (id) => go({ kind: "persona", id }),
   openWiki: (title) => {
@@ -73,10 +98,12 @@ const ctx = {
   },
   setView: (id) => {
     ui.viewId = id;
+    if (route.kind === "page") ui.viewByPage[route.id] = id;
     render();
   },
   setPersonaFilter: (id) => {
     ui.personaFilter = id;
+    if (route.kind === "page") ui.filterByPage[route.id] = id;
     render();
   },
   exportCSV: (db, view, rows) => {
@@ -124,6 +151,7 @@ function renderSidebar(ws) {
     <div class="brand">
       <span class="mark"></span>
       <input class="ws-name" value="${esc(ws.name)}" title="Workspace name">
+      <button class="btn ghost mini theme-btn" data-theme title="Toggle color theme">${currentTheme() === "dark" ? "Light" : "Dark"}</button>
     </div>
     <input class="search" placeholder="Search pages…" value="${esc(ui.search)}">
     <label class="acting">Acting as
@@ -158,6 +186,7 @@ function renderSidebar(ws) {
   };
   $("#sidebar [data-acting]").onchange = (e) => mutate((w) => { w.actingPersonaId = e.target.value; });
   $("#sidebar").onclick = (e) => {
+    if (e.target.closest("[data-theme]")) return toggleTheme();
     const goBtn = e.target.closest("[data-go]");
     if (goBtn) return go({ kind: goBtn.dataset.go });
     const pageBtn = e.target.closest("[data-page]");
@@ -495,10 +524,15 @@ function onGlobalKey(e) {
 }
 
 function boot() {
+  applyTheme();
   load();
   subscribe(() => render());
   window.addEventListener("hashchange", () => {
     route = parseHash();
+    if (route.kind === "page") {
+      ui.viewId = ui.viewByPage[route.id] || null;
+      ui.personaFilter = ui.filterByPage[route.id] || null;
+    }
     render();
   });
   document.addEventListener("keydown", onGlobalKey);
@@ -511,7 +545,7 @@ function boot() {
       renderOverlays();
     }
   });
-  window.lattice = { getWorkspace, mutate, toast, go, ctx };
+  window.lattice = { getWorkspace, mutate, toast, go, ctx, ui, toggleTheme };
   render();
 }
 

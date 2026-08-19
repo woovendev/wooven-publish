@@ -73,7 +73,7 @@ Personas: create/edit/archive in the sidebar. **Acting as** is persisted on the 
 | j / k or arrows | Move between blocks |
 | ⌘/Ctrl+Shift+↑↓ | Reorder block |
 | ⌘/Ctrl+K | Jump to page / persona / task |
-| ⌘/Ctrl+Z | Undo last workspace change (not while typing in a block) |
+| Sidebar **Dark** / **Light** | Toggle color theme (saved as `lattice:theme`) |
 | `[[Title]]` | Wikilink (creates the page if missing) |
 | `@handle` | Mention a persona |
 

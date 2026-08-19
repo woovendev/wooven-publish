@@ -25,7 +25,7 @@ export function renderDatabase(root, ws, page, ctx) {
   root.innerHTML = `
     <div class="db-toolbar">
       <div class="view-tabs">
-        ${db.views.map((v) => `<button class="tab${v.id === view.id ? " on" : ""}" data-view="${v.id}">${esc(v.name)}</button>`).join("")}
+        ${db.views.map((v) => `<button type="button" class="tab${v.id === view.id ? " on" : ""}" data-view="${v.id}">${esc(v.name)}</button>`).join("")}
       </div>
       <label class="filter">Persona
         <select data-persona-filter>
@@ -46,11 +46,13 @@ export function renderDatabase(root, ws, page, ctx) {
   else if (layout === "gallery") renderGallery(body, ws, db, rows, ctx);
   else renderTable(body, ws, db, rows, ctx);
 
-  root.querySelector("[data-view]")?.parentElement.addEventListener("click", (e) => {
+  root.querySelector(".view-tabs").onclick = (e) => {
     const t = e.target.closest("[data-view]");
     if (t) ctx.setView(t.dataset.view);
-  });
-  root.querySelector("[data-persona-filter]").onchange = (e) => ctx.setPersonaFilter(e.target.value || null);
+  };
+  root.querySelector("[data-persona-filter]").onchange = (e) => {
+    ctx.setPersonaFilter(e.target.value || null);
+  };
   root.querySelector("[data-new-row]").onclick = () => {
     if (db.id === "db-tasks") {
       const created = createTask(ws, { title: "Untitled" });
