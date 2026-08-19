@@ -343,9 +343,11 @@ function pageIsUnder(ws, pageId, ancestorId) {
   return false;
 }
 
-function descendantWikiCount(ws, id) {
+function descendantCount(ws, id) {
   let n = 0;
-  for (const c of childPages(ws, id)) n += 1 + descendantWikiCount(ws, c.id);
+  for (const p of ws.pages) {
+    if (!p.archived && p.parentPageId === id) n += 1 + descendantCount(ws, p.id);
+  }
   return n;
 }
 
@@ -353,7 +355,7 @@ function deleteWikiPage(id) {
   const ws = getWorkspace();
   const page = getPage(ws, id);
   if (!page || page.archived) return;
-  const kids = descendantWikiCount(ws, id);
+  const kids = descendantCount(ws, id);
   const label = kids
     ? `Delete “${page.title}” and ${kids} nested page(s)? This archives them.`
     : `Delete “${page.title}”? This archives the page.`;
