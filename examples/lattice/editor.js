@@ -35,7 +35,11 @@ export function esc(s) {
 
 export function renderInline(raw, ws) {
   let s = esc(raw);
-  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  const holes = [];
+  s = s.replace(/`([^`]+)`/g, (_, inner) => {
+    holes.push(`<code>${inner}</code>`);
+    return `\0H${holes.length - 1}\0`;
+  });
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/~~([^~]+)~~/g, "<s>$1</s>");
   s = s.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
@@ -43,6 +47,7 @@ export function renderInline(raw, ws) {
   s = s.replace(/\[\[@([a-zA-Z0-9_]+)\]\]/g, (_, h) => mentionHtml(ws, h));
   s = s.replace(/\[\[([^[\]]+)\]\]/g, (_, title) => wikiHtml(ws, title));
   s = s.replace(/@([a-zA-Z0-9_]+)/g, (_, h) => mentionHtml(ws, h));
+  s = s.replace(/\0H(\d+)\0/g, (_, i) => holes[Number(i)]);
   return s || "<span class=ph>Empty</span>";
 }
 
@@ -335,11 +340,16 @@ function onEditInput(edit, page, ctx) {
       b.content = converted.content;
       if (converted.props) Object.assign(b.props, converted.props);
       b.updatedAt = now();
+    } else if (b.type === "bullet" && /^\[ \]\s?/.test(md)) {
+      b.type = "todo";
+      b.content = md.replace(/^\[ \]\s?/, "");
+      b.props.checked = false;
+      b.updatedAt = now();
     } else {
       b.content = md;
       b.updatedAt = now();
     }
-  }, { silent: !converted });
+  }, { silent: !converted && !(md.startsWith("[ ]") || false) });
   requestAnimationFrame(() => {
     const el = document.querySelector(`[data-edit="${id}"]`);
     if (!el) return;
