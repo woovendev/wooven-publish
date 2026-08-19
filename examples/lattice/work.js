@@ -6,8 +6,8 @@ import {
   getPage, getPersona, getProp, setProp, asIdList, blockedByPages, setBlocking,
   tasksDb, projectsDb, dbRows, databaseForPage, childTasks, taskProgress,
   parentTaskId, tasksForProject, isDoneStatus, pushActivity, clone,
-} from "./model.js?v=3";
-import { mutate, toast } from "./store.js?v=3";
+} from "./model.js?v=4";
+import { mutate, toast } from "./store.js?v=4";
 
 export function dueOf(page) {
   return page?.properties?.[TASK_PROP.due] || page?.properties?.[PROJECT_PROP.due] || "";

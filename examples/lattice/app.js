@@ -5,14 +5,14 @@ import {
   breadcrumbs, searchPages, createPage, createBlock, createPersona, appendBlock,
   initialsFrom, now, archivePage, resolveWikiTitle, pushActivity, mentionHandles,
   dbByPageId,
-} from "./model.js?v=3";
+} from "./model.js?v=4";
 import {
   load, getWorkspace, subscribe, getBanner, clearBanner, mutate, toast,
   downloadJSON, importJSON, exportCSV, downloadCSV, resetToDemo, undo, importCSV,
-} from "./store.js?v=3";
-import { renderPage, renderComments, slashHtml, slashIndexClick, applySlash, getSlash, closeSlash, renderInline, esc } from "./editor.js?v=3";
-import { renderDatabase, renderProps, renderMyWork, renderWorkload, renderReport } from "./views.js?v=3";
-import { myWork, workload, report, tasksByPersona } from "./work.js?v=3";
+} from "./store.js?v=4";
+import { renderPage, renderComments, slashHtml, slashIndexClick, applySlash, getSlash, closeSlash, renderInline, esc } from "./editor.js?v=4";
+import { renderDatabase, renderProps, renderMyWork, renderWorkload, renderReport } from "./views.js?v=4";
+import { myWork, workload, report, tasksByPersona } from "./work.js?v=4";
 
 const $ = (sel, el = document) => el.querySelector(sel);
 
@@ -151,7 +151,7 @@ function renderSidebar(ws) {
     <div class="brand">
       <span class="mark"></span>
       <input class="ws-name" value="${esc(ws.name)}" title="Workspace name">
-      <button class="btn ghost mini theme-btn" data-theme title="Toggle color theme">${currentTheme() === "dark" ? "Light" : "Dark"}</button>
+      <button class="btn ghost mini theme-btn" type="button" data-theme-toggle title="Toggle color theme">${currentTheme() === "dark" ? "Light" : "Dark"}</button>
     </div>
     <input class="search" placeholder="Search pages…" value="${esc(ui.search)}">
     <label class="acting">Acting as
@@ -173,7 +173,7 @@ function renderSidebar(ws) {
       </button>`).join("")}
     </div>
     <div class="side-foot">
-      <button class="btn" data-theme>${currentTheme() === "dark" ? "Light mode" : "Dark mode"}</button>
+      <button class="btn" type="button" data-theme-toggle>${currentTheme() === "dark" ? "Light mode" : "Dark mode"}</button>
       <button class="btn ghost" data-cmd>⌘K Jump</button>
       <button class="btn ghost" data-export>Export</button>
       <button class="btn ghost" data-import>Import</button>
@@ -187,7 +187,7 @@ function renderSidebar(ws) {
   };
   $("#sidebar [data-acting]").onchange = (e) => mutate((w) => { w.actingPersonaId = e.target.value; });
   $("#sidebar").onclick = (e) => {
-    if (e.target.closest("[data-theme]")) return toggleTheme();
+    if (e.target.closest("[data-theme-toggle]")) return toggleTheme();
     const goBtn = e.target.closest("[data-go]");
     if (goBtn) return go({ kind: goBtn.dataset.go });
     const pageBtn = e.target.closest("[data-page]");

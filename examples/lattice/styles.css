@@ -46,20 +46,22 @@ html[data-theme="dark"] {
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
 html { color-scheme: light; }
 body {
   font: 14px/1.5 var(--sans);
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
 }
 
 #app {
   display: grid;
   grid-template-columns: 252px minmax(0, 1fr) 260px;
-  min-height: 100%;
-  padding-bottom: 56px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* ---------- banner (top, leave bottom-right for wooven pill) ---------- */
@@ -84,11 +86,13 @@ body {
 #sidebar {
   background: var(--sidebar);
   border-right: 1px solid var(--line);
-  padding: 14px 12px 24px;
+  padding: 14px 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
 }
 .brand { display: flex; align-items: center; gap: 8px; }
 .theme-btn { flex: none; }
@@ -159,6 +163,8 @@ body {
 #canvas {
   background: var(--paper);
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
   padding: 20px 36px 48px;
 }
 .crumbs {
@@ -328,8 +334,10 @@ hr.block-body { border: 0; border-top: 1px solid var(--line); margin: 12px 0; gr
 #comments {
   border-left: 1px solid var(--line);
   background: var(--bg);
-  padding: 16px 14px 64px;
+  padding: 16px 14px 56px;
   font-size: 13px;
+  min-height: 0;
+  overflow: auto;
 }
 .cmt { display: grid; grid-template-columns: 12px 1fr; gap: 8px; margin-bottom: 12px; }
 .cmt.reply { margin-left: 16px; }
