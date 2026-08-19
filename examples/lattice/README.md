@@ -32,9 +32,11 @@ Wooven CDN caches `.js` / `.css` for four hours on a given URL. Lattice appends 
 
 `index.html` must stay at this folder’s root. Only static files (`html`, `css`, `js`, `md`, …). Relative ES module imports (`./app.js`, `./store.js`) are required so hosting with `X-Content-Type-Options: nosniff` still boots.
 
-Live URL: https://ivory-pine-z7gm79.wooven.dev/
+Live URL: https://friendly-festival-19nxmy.wooven.dev/
 
-Anonymous TTL 24h from publish. Claim: https://wooven.dev/claim?slug=ivory-pine-z7gm79
+Anonymous TTL 24h from publish. Claim: https://wooven.dev/claim?slug=friendly-festival-19nxmy
+
+The previous slug (`ivory-pine-z7gm79`) may still show an older cached JS/CSS bundle for up to 4 hours.
 
 `localhost:8766` and `https://{slug}.wooven.dev` are different origins, so they have **separate** `localStorage` workspaces. First visit to a new origin seeds the Studio demo.
 
