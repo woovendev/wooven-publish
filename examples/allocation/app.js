@@ -235,11 +235,25 @@
     renderAfter(c);
     drawIncomeSankey(c);
     drawHoldings();
+    renderLegend(c);
     save();
   }
 
+  function renderLegend(c) {
+    const items = [
+      ["var(--living)", `Living ${fmtPct(c.livingPct)}%`],
+      ["var(--saved)", `Saved ${fmtPct(c.savedPct)}%`],
+      ["var(--backup)", `Backup ${fmtPct(c.backupPct)}%`],
+      ["var(--invest)", `Investments ${fmtPct(c.investPct)}%`],
+      ...c.slices.filter((s) => s.ofIncome > 0).map((s) => [MIX_META[s.id].color, `${MIX_META[s.id].label} ${fmtPct(s.ofIncome)}%`]),
+    ];
+    $("sankeyLegend").innerHTML = items.map(([color, label]) =>
+      `<span><i class="dot" style="background:${color}"></i>${label}</span>`
+    ).join("");
+  }
+
   function pctInput(value, field) {
-    return `<input class="pct" data-field="${field}" value="${fmtPct(value)}" inputmode="decimal" aria-label="${field}" />`;
+    return `<input class="pct" data-field="${field}" value="${fmtPct(value)}" inputmode="decimal" aria-label="${field}" /><span class="pct-mark">%</span>`;
   }
 
   function chfInput(value, field) {

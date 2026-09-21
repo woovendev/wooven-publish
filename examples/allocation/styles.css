@@ -178,7 +178,17 @@ main, footer {
   color: var(--muted);
 }
 
-.sankey-wrap { overflow-x: auto; }
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.legend span { display: inline-flex; align-items: center; }
+.pct-mark { color: var(--muted); margin-left: 1px; }
 #sankey, #holdings {
   display: block;
   width: 100%;
