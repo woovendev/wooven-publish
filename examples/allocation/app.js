@@ -10,7 +10,8 @@
     other: { label: "Other assets", color: "var(--other)" },
   };
   const POTS = [
-    { id: "backup", label: "Backup + family fund", color: "var(--backup)" },
+    { id: "backup", label: "Backup fund", color: "var(--backup)" },
+    { id: "family", label: "Family fund", color: "var(--family)" },
     { id: "taxes", label: "Taxes", color: "var(--taxes)" },
     { id: "cash", label: "Cash", color: "var(--cash)" },
     { id: "btc", label: "BTC", color: "var(--btc)", crypto: true },
@@ -20,9 +21,10 @@
 
   const DEFAULT_MONTH = () => ({
     income: 1_000_000,
-    livingPct: 56,
-    backupOfSavedPct: 16,
-    mix: { taxes: 0, cash: 0, btc: 50, realestate: 50, other: 0 },
+    livingPct: 55.75,
+    backupOfSavedPct: 11.43089027,
+    familyOfSavedPct: 5.715445133,
+    mix: { taxes: 0, cash: 0, btc: 50, realestate: 25, other: 25 },
   });
 
   const BTC_YEAR_RETURNS = [1.9333, 54.6301, -0.5759, 0.3437, 1.2375, 13.6903, -0.7348, 0.92, 3.0309, 0.5971, -0.6427, 1.5541, 1.2098, -0.0633];
@@ -31,8 +33,8 @@
   const DEFAULT_STATE = () => ({
     month: currentMonthId(),
     months: {},
-    funds: { backup: 0, taxes: 0, cash: 0, btc: 0, btcUnit: "BTC", realestate: 17000, other: 0 },
-    available: { backup: 0, taxes: 0, cash: 0, btc: 0, realestate: 8225, other: 8225 },
+    funds: { backup: 0, family: 0, taxes: 0, cash: 0, btc: 0, btcUnit: "BTC", realestate: 17000, other: 0 },
+    available: { backup: 0, family: 0, taxes: 0, cash: 0, btc: 0, realestate: 8225, other: 8225 },
     rates: { btcChf: 69090, usdtChf: 0.823057, fetchedAt: 0 },
     projYears: 4,
     simAsset: "btc",
@@ -44,6 +46,7 @@
     const off = () => ({ on: false, threshold: 0, yearlyReturn: 0, startPrice: 0 });
     return {
       backup: off(),
+      family: off(),
       taxes: off(),
       cash: off(),
       btc: { on: true, threshold: 100000, yearlyReturn: BTC_GEO_YEARLY, startPrice: 0 },
@@ -101,7 +104,15 @@
 
   function monthData() {
     if (!state.months[state.month]) state.months[state.month] = DEFAULT_MONTH();
+    else state.months[state.month] = normalizeMonth(state.months[state.month]);
     return state.months[state.month];
+  }
+
+  function normalizeMonth(m) {
+    const d = DEFAULT_MONTH();
+    if (!m) return d;
+    if (m.familyOfSavedPct == null) return { ...d, income: m.income ?? d.income };
+    return { ...d, ...m, mix: { ...d.mix, ...(m.mix || {}) } };
   }
 
   function parseAmount(raw) {
@@ -192,9 +203,12 @@
     const income = Math.max(0, m.income);
     const livingPct = m.livingPct;
     const savedPct = 100 - livingPct;
-    const backupOfSaved = m.backupOfSavedPct;
-    const investOfSaved = 100 - backupOfSaved;
+    const backupOfSaved = m.backupOfSavedPct || 0;
+    const familyOfSaved = m.familyOfSavedPct || 0;
+    const fundsOfSaved = backupOfSaved + familyOfSaved;
+    const investOfSaved = Math.max(0, 100 - fundsOfSaved);
     const backupPct = savedPct * backupOfSaved / 100;
+    const familyPct = savedPct * familyOfSaved / 100;
     const investPct = savedPct * investOfSaved / 100;
     const mixSum = MIX_KEYS.reduce((s, k) => s + (m.mix[k] || 0), 0);
     const slices = MIX_KEYS.map((k) => {
@@ -211,9 +225,14 @@
       savedPct,
       savedChf: income * savedPct / 100,
       backupOfSaved,
+      familyOfSaved,
+      fundsOfSaved,
       investOfSaved,
       backupPct,
+      familyPct,
       backupChf: income * backupPct / 100,
+      familyChf: income * familyPct / 100,
+      fundsChf: income * (backupPct + familyPct) / 100,
       investPct,
       investChf: income * investPct / 100,
       mixSum,
@@ -244,6 +263,7 @@
       income: m.income,
       livingPct: m.livingPct,
       backupOfSavedPct: m.backupOfSavedPct,
+      familyOfSavedPct: m.familyOfSavedPct,
       mix: { ...m.mix },
     };
   }
@@ -284,6 +304,7 @@
       ["var(--living)", `Living ${fmtPct(c.livingPct)}%`],
       ["var(--saved)", `Saved ${fmtPct(c.savedPct)}%`],
       ["var(--backup)", `Backup ${fmtPct(c.backupPct)}%`],
+      ["var(--family)", `Family ${fmtPct(c.familyPct)}%`],
       ["var(--invest)", `Investments ${fmtPct(c.investPct)}%`],
       ...c.slices.filter((s) => s.ofIncome > 0).map((s) => [MIX_META[s.id].color, `${MIX_META[s.id].label} ${fmtPct(s.ofIncome)}%`]),
     ];
@@ -300,6 +321,10 @@
     return `<input class="chf-edit" data-chf="${field}" value="${fmtK(value)}" inputmode="decimal" aria-label="${field} CHF" />`;
   }
 
+  function plainChfInput(value, field) {
+    return `<input class="chf-edit" data-chf="${field}" data-plain="1" value="${fmtInputChf(value)}" inputmode="decimal" aria-label="${field} CHF" />`;
+  }
+
   function renderTable(c) {
     const rows = [];
     rows.push(row("root", `<span class="dot" style="background:var(--income)"></span>100%`,
@@ -308,24 +333,31 @@
       `${pctInput(c.livingPct, "livingPct")}<span>of income</span>${chfInput(c.livingChf, "living")}`));
     rows.push(row("", `<span class="dot" style="background:var(--saved)"></span>Saved`,
       `${pctInput(c.savedPct, "savedPct")}<span>of income</span><span>${fmtK(c.savedChf)}</span>`));
-    rows.push(row("nest", `<span class="dot" style="background:var(--backup)"></span>Backup + family funds`,
-      `${pctInput(c.backupOfSaved, "backupOfSavedPct")}<span>of savings = ${fmtPct(c.backupPct)}% of income</span>${chfInput(c.backupChf, "backup")}`));
-    rows.push(row("nest", `<span class="dot" style="background:var(--invest)"></span>Investments / cash`,
-      `${pctInput(c.investOfSaved, "investOfSavedPct")}<span>of savings = ${fmtPct(c.investPct)}% of income</span><span>${fmtK(c.investChf)}</span>`));
+    rows.push(row("nest", `<span class="dot" style="background:var(--backup)"></span>Backup fund`,
+      `${pctInput(c.backupOfSaved, "backupOfSavedPct")}<span>of savings = ${fmtPct(c.backupPct)}% of income</span>${plainChfInput(c.backupChf, "backup")}`));
+    rows.push(row("nest", `<span class="dot" style="background:var(--family)"></span>Family fund`,
+      `${pctInput(c.familyOfSaved, "familyOfSavedPct")}<span>of savings = ${fmtPct(c.familyPct)}% of income</span>${plainChfInput(c.familyChf, "family")}`));
+    rows.push(row("nest muted-name", `Backup + family`,
+      `<span>${fmtPct(c.fundsOfSaved)}% of savings = ${fmtK(c.fundsChf)}</span>`));
+    rows.push(row("nest", `<span class="dot" style="background:var(--invest)"></span>Investments`,
+      `<span>${fmtPct(c.investOfSaved)}% of savings = ${fmtPct(c.investPct)}% of income</span><span>${fmtK(c.investChf)}</span>`));
 
     for (const s of c.slices) {
       const meta = MIX_META[s.id];
       rows.push(row("nest-2", `<span class="dot" style="background:${meta.color}"></span>${meta.label}`,
-        `${pctInput(s.ofInvest, "mix." + s.id)}<span>of investments = ${fmtPct(s.ofIncome)}% of income</span>${chfInput(s.chf, "mixChf." + s.id)}`));
+        `${pctInput(s.ofInvest, "mix." + s.id)}<span>of remaining = ${fmtPct(s.ofIncome)}% of income</span>${chfInput(s.chf, "mixChf." + s.id)}`));
     }
     if (c.unallocOfInvest > 0.009) {
       rows.push(row("nest-2 muted-name", `Unallocated`,
-        `<span>${fmtPct(c.unallocOfInvest)}% of investments = ${fmtPct(c.unallocPct)}% of income</span><span>${fmtK(c.unallocChf)}</span>`));
+        `<span>${fmtPct(c.unallocOfInvest)}% of remaining = ${fmtPct(c.unallocPct)}% of income</span><span>${fmtK(c.unallocChf)}</span>`));
     }
 
     $("allocTable").innerHTML = rows.join("");
     const warn = $("mixWarn");
-    if (c.mixSum > 100.009) {
+    if (c.fundsOfSaved + c.investOfSaved > 100.05) {
+      warn.hidden = false;
+      warn.textContent = `Backup + family take ${fmtPct(c.fundsOfSaved)}% of savings (over 100%).`;
+    } else if (c.mixSum > 100.009) {
       warn.hidden = false;
       warn.textContent = `Investment mix adds up to ${fmtPct(c.mixSum)}% (over 100%). Shrink a slice.`;
     } else {
@@ -376,6 +408,7 @@
     const h = holdingsChf();
     const flow = {
       backup: c.backupChf,
+      family: c.familyChf,
       taxes: sliceChf(c, "taxes"),
       cash: sliceChf(c, "cash"),
       btc: sliceChf(c, "btc"),
@@ -402,6 +435,7 @@
   function monthlyFlow(c) {
     return {
       backup: c.backupChf,
+      family: c.familyChf,
       taxes: sliceChf(c, "taxes"),
       cash: sliceChf(c, "cash"),
       btc: sliceChf(c, "btc"),
@@ -604,12 +638,14 @@
       { id: "living", col: 1, value: c.livingChf, label: "Living", color: "#6b6b6b" },
       { id: "saved", col: 1, value: c.savedChf, label: "Saved", color: "#d4d4d4" },
       { id: "backup", col: 2, value: c.backupChf, label: "Backup", color: "#e8c547" },
+      { id: "family", col: 2, value: c.familyChf, label: "Family", color: "#c4a24a" },
       { id: "invest", col: 2, value: c.investChf, label: "Investments", color: "#ececec" },
     ];
     const links = [
       { from: "income", to: "living", value: c.livingChf, color: "#6b6b6b" },
       { from: "income", to: "saved", value: c.savedChf, color: "#d4d4d4" },
       { from: "saved", to: "backup", value: c.backupChf, color: "#e8c547" },
+      { from: "saved", to: "family", value: c.familyChf, color: "#c4a24a" },
       { from: "saved", to: "invest", value: c.investChf, color: "#ececec" },
     ];
     for (const s of c.slices) {
@@ -633,6 +669,7 @@
       "var(--realestate)": "#7eb6ff",
       "var(--other)": "#c4a6ff",
       "var(--backup)": "#e8c547",
+      "var(--family)": "#c4a24a",
     };
     return map[v] || v;
   }
@@ -776,8 +813,8 @@
     const m = monthData();
     if (field === "livingPct") m.livingPct = clamp(pct, 0, 100);
     else if (field === "savedPct") m.livingPct = clamp(100 - pct, 0, 100);
-    else if (field === "backupOfSavedPct") m.backupOfSavedPct = clamp(pct, 0, 100);
-    else if (field === "investOfSavedPct") m.backupOfSavedPct = clamp(100 - pct, 0, 100);
+    else if (field === "backupOfSavedPct") m.backupOfSavedPct = Math.max(0, pct);
+    else if (field === "familyOfSavedPct") m.familyOfSavedPct = Math.max(0, pct);
     else if (field.startsWith("mix.")) m.mix[field.slice(4)] = Math.max(0, pct);
   }
 
@@ -786,7 +823,8 @@
     const c = compute();
     if (field === "income") m.income = Math.max(0, chf);
     else if (field === "living" && c.income) m.livingPct = clamp(chf / c.income * 100, 0, 100);
-    else if (field === "backup" && c.savedChf) m.backupOfSavedPct = clamp(chf / c.savedChf * 100, 0, 100);
+    else if (field === "backup" && c.savedChf) m.backupOfSavedPct = Math.max(0, chf / c.savedChf * 100);
+    else if (field === "family" && c.savedChf) m.familyOfSavedPct = Math.max(0, chf / c.savedChf * 100);
     else if (field.startsWith("mixChf.")) {
       const id = field.slice(7);
       if (c.investChf) m.mix[id] = Math.max(0, chf / c.investChf * 100);
@@ -799,7 +837,7 @@
     const t = e.target;
     if (!(t instanceof HTMLInputElement)) return;
     if (t.dataset.field) applyField(t.dataset.field, parsePct(t.value));
-    if (t.dataset.chf) applyChf(t.dataset.chf, parseChfField(t.value));
+    if (t.dataset.chf) applyChf(t.dataset.chf, t.dataset.plain ? parseAmount(t.value) : parseChfField(t.value));
     save();
     const c = compute();
     $("income").value = fmtIncomeInput(c.income);
@@ -949,8 +987,9 @@
       `Allok  ${state.month}  net income ${fmtChf(c.income)}`,
       `Living ${fmtPct(c.livingPct)}%  ${fmtChf(c.livingChf)}`,
       `Saved ${fmtPct(c.savedPct)}%  ${fmtChf(c.savedChf)}`,
-      `  Backup ${fmtPct(c.backupOfSaved)}% of savings = ${fmtPct(c.backupPct)}% of income  ${fmtChf(c.backupChf)}`,
-      `  Investments ${fmtPct(c.investOfSaved)}% of savings = ${fmtPct(c.investPct)}% of income  ${fmtChf(c.investChf)}`,
+      `  Backup fund ${fmtPct(c.backupOfSaved)}% of savings = ${fmtChf(c.backupChf)}`,
+      `  Family fund ${fmtPct(c.familyOfSaved)}% of savings = ${fmtChf(c.familyChf)}`,
+      `  Investments ${fmtPct(c.investOfSaved)}% of savings = ${fmtChf(c.investChf)}`,
       ...c.slices.map((s) => `    ${MIX_META[s.id].label} ${fmtPct(s.ofInvest)}% of investments = ${fmtPct(s.ofIncome)}% of income  ${fmtChf(s.chf)}`),
     ];
     try {
