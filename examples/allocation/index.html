@@ -6,7 +6,7 @@
   <title>Allok — monthly allocation</title>
   <meta name="description" content="Track monthly resource allocation in CHF. Sankey of the income split, plus existing pots." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M4 8h24v3H4zm6 7h18v3H10zm10 7h8v3h-8z' fill='%23fff'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <header class="top">
@@ -96,6 +96,47 @@
       </div>
       <div id="afterTable" class="sheet after"></div>
     </section>
+
+    <section class="panel" aria-labelledby="projTitle">
+      <div class="panel-head">
+        <h2 id="projTitle">Projection</h2>
+        <p>Cumulative pots if this month’s split runs for N years. Living is spent and never added. Green rows are year marks.</p>
+      </div>
+      <div class="toolbar">
+        <label>Years <input id="projYears" inputmode="numeric" /></label>
+        <span id="projSummary" class="muted"></span>
+      </div>
+      <div class="grid-wrap">
+        <table class="grid" id="projTable"></table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="simTitle">
+      <div class="panel-head">
+        <h2 id="simTitle">Exposure simulation</h2>
+        <p>Desired column is the pace. Exposed is a random price path that only fills inside the band. Initial batch waits for a print below the initial threshold. Monthly batches fill anywhere in the band. Bounds are exclusive.</p>
+      </div>
+      <div id="simAssets" class="asset-tabs"></div>
+      <div id="bandForm" class="band-form"></div>
+      <div class="toolbar">
+        <button type="button" id="reroll" class="ghost">Reroll path</button>
+        <span id="simSummary" class="muted"></span>
+      </div>
+      <svg id="simSpark" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simulated price path"></svg>
+      <div class="grid-wrap">
+        <table class="grid" id="simTable"></table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="isTitle">
+      <div class="panel-head">
+        <h2 id="isTitle">Is allocation</h2>
+        <p>What actually happened that month, next to the simulation and the desired pace. Empty means not recorded.</p>
+      </div>
+      <div class="grid-wrap">
+        <table class="grid" id="isTable"></table>
+      </div>
+    </section>
   </main>
 
   <footer>
@@ -104,6 +145,6 @@
   </footer>
 
   <div id="tooltip" class="tooltip" hidden></div>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

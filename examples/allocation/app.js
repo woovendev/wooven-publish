@@ -30,7 +30,25 @@
     months: {},
     funds: { backup: 0, taxes: 0, cash: 0, btc: 0, btcUnit: "BTC", realestate: 0, other: 0 },
     rates: { btcChf: 69090, usdtChf: 0.823057, fetchedAt: 0 },
+    projYears: 4,
+    simSeed: 1,
+    simAsset: "btc",
+    noise: 0.55,
+    bands: defaultBands(),
+    actuals: {},
   });
+
+  function defaultBands() {
+    const off = () => ({ on: false, lo: 0, hi: 0, initialBelow: 0, startPrice: 0 });
+    return {
+      backup: off(),
+      taxes: off(),
+      cash: off(),
+      btc: { on: true, lo: 35000, hi: 65000, initialBelow: 55000, startPrice: 0 },
+      realestate: off(),
+      other: off(),
+    };
+  }
 
   let state = load();
   const $ = (id) => document.getElementById(id);
@@ -47,12 +65,17 @@
       if (!raw) return DEFAULT_STATE();
       const parsed = JSON.parse(raw);
       const base = DEFAULT_STATE();
+      const bands = defaultBands();
+      const parsedBands = parsed.bands || {};
+      for (const k of Object.keys(bands)) bands[k] = { ...bands[k], ...(parsedBands[k] || {}) };
       return {
         ...base,
         ...parsed,
         funds: { ...base.funds, ...(parsed.funds || {}) },
         rates: { ...base.rates, ...(parsed.rates || {}) },
         months: parsed.months || {},
+        bands,
+        actuals: parsed.actuals || {},
       };
     } catch {
       return DEFAULT_STATE();
@@ -236,6 +259,7 @@
     drawIncomeSankey(c);
     drawHoldings();
     renderLegend(c);
+    renderForecast(c);
     save();
   }
 
@@ -354,6 +378,264 @@
 
   function sliceChf(c, id) {
     return c.slices.find((s) => s.id === id)?.chf || 0;
+  }
+
+  function monthlyFlow(c) {
+    return {
+      backup: c.backupChf,
+      taxes: sliceChf(c, "taxes"),
+      cash: sliceChf(c, "cash"),
+      btc: sliceChf(c, "btc"),
+      realestate: sliceChf(c, "realestate"),
+      other: sliceChf(c, "other"),
+    };
+  }
+
+  function addMonths(id, n) {
+    const [y, m] = id.split("-").map(Number);
+    const d = new Date(y, m - 1 + n, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function monthName(id) {
+    const [y, m] = id.split("-").map(Number);
+    return new Date(y, m - 1, 1).toLocaleString("en", { month: "long", year: "numeric" });
+  }
+
+  function mulberry32(a) {
+    return function rng() {
+      a |= 0;
+      a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function gauss(rng) {
+    const u = rng() || 1e-12;
+    const v = rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  function bandOf(id) {
+    return state.bands[id] || defaultBands()[id];
+  }
+
+  function startPriceOf(id) {
+    const b = bandOf(id);
+    if (b.startPrice > 0) return b.startPrice;
+    if (id === "btc") return state.rates.btcChf || 0;
+    return 0;
+  }
+
+  function inOpen(x, lo, hi) {
+    return x > lo && x < hi;
+  }
+
+  function rangeHits(low, high, lo, hi) {
+    return high > lo && low < hi;
+  }
+
+  function clip(x, lo, hi) {
+    return Math.min(hi, Math.max(lo, x));
+  }
+
+  function simulatePath(start, n, rng, vol) {
+    let px = Math.max(start, 1e-9);
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+      const z = gauss(rng);
+      const mv = Math.max(0, vol) / Math.sqrt(12);
+      const close = px * Math.exp(-0.5 * mv * mv + mv * z);
+      const span = mv * (0.7 + 1.5 * rng());
+      const low = Math.min(px, close) * Math.exp(-span);
+      const high = Math.max(px, close) * Math.exp(span);
+      rows.push({ open: px, close, low, high });
+      px = close;
+    }
+    return rows;
+  }
+
+  function simulateAsset(id, flow, months, holdings) {
+    const b = bandOf(id);
+    const n = months.length;
+    const start = startPriceOf(id);
+    const rng = mulberry32((state.simSeed ^ (id.charCodeAt(0) * 997)) >>> 0);
+    const path = b.on && start > 0 ? simulatePath(start, n, rng, state.noise) : months.map(() => {
+      const p = start || 1;
+      return { open: p, close: p, low: p, high: p };
+    });
+    const gated = b.on && b.lo < b.hi;
+    const lo = b.lo, hi = b.hi;
+    const initTop = b.initialBelow > 0 ? Math.min(b.initialBelow, hi) : lo;
+    let initialReserve = holdings;
+    let monthlyReserve = 0;
+    let exposed = 0;
+    let units = 0;
+    let desired = holdings;
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+      const px = path[i];
+      monthlyReserve += flow;
+      desired += flow;
+      let deployedInit = 0, deployedMonth = 0, fill = 0;
+      const hitMonth = !gated || rangeHits(px.low, px.high, lo, hi);
+      const hitInit = !gated || rangeHits(px.low, px.high, lo, initTop);
+      if (hitInit && initialReserve > 0) {
+        fill = gated ? clip(px.low, lo + 1e-9, initTop - 1e-9) : (px.close || 1);
+        deployedInit = initialReserve;
+        if (fill > 0) units += deployedInit / fill;
+        exposed += deployedInit;
+        initialReserve = 0;
+      }
+      if (hitMonth && monthlyReserve > 0) {
+        fill = gated ? clip(px.low, lo + 1e-9, hi - 1e-9) : (px.close || 1);
+        deployedMonth = monthlyReserve;
+        if (fill > 0) units += deployedMonth / fill;
+        exposed += deployedMonth;
+        monthlyReserve = 0;
+      }
+      rows.push({
+        month: months[i],
+        price: px.close,
+        low: px.low,
+        high: px.high,
+        hitMonth,
+        hitInit,
+        deployedInit,
+        deployedMonth,
+        deployed: deployedInit + deployedMonth,
+        desired,
+        reserved: initialReserve + monthlyReserve,
+        exposed,
+        units,
+        fill,
+      });
+    }
+    return { rows, path, gated, lo, hi, initTop, start };
+  }
+
+  function renderForecast(c) {
+    const years = clamp(Number(state.projYears) || 4, 1, 30);
+    state.projYears = years;
+    $("projYears").value = String(years);
+    const n = years * 12;
+    const start = state.month;
+    const months = Array.from({ length: n }, (_, i) => addMonths(start, i));
+    const flow = monthlyFlow(c);
+    const held = holdingsChf();
+    const bals = { ...held };
+
+    const visiblePots = POTS.filter((p) => held[p.id] > 0 || flow[p.id] > 0);
+    const cols = visiblePots.length ? visiblePots : POTS;
+
+    const head = ["Month", ...cols.map((p) => p.label), "Baseline"];
+    const body = [];
+    const preCells = cols.map((p) => held[p.id]);
+    body.push({ id: start, label: monthName(start) + " pre", kind: "pre", cells: preCells, base: POTS.reduce((s, p) => s + held[p.id], 0) });
+    months.forEach((id, i) => {
+      POTS.forEach((p) => { bals[p.id] += flow[p.id]; });
+      const cells = cols.map((p) => bals[p.id]);
+      const base = POTS.reduce((s, p) => s + bals[p.id], 0);
+      const kind = i === 0 || i % 12 === 0 ? "year" : "";
+      const label = i === 0 ? monthName(id) + " post" : monthName(id);
+      body.push({ id, label, kind, cells, base });
+    });
+
+    $("projTable").innerHTML = `<thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${
+      body.map((r) => `<tr class="${r.kind}"><td>${r.label}</td>${r.cells.map((v) => `<td>${fmtK(v)}</td>`).join("")}<td class="fill">${fmtK(r.base)}</td></tr>`).join("")
+    }</tbody>`;
+    const last = body[body.length - 1];
+    $("projSummary").textContent = `After ${years}y  baseline ${fmtChf(last.base)}  ·  BTC ${fmtK(bals.btc)}  ·  real estate ${fmtK(bals.realestate)}`;
+
+    const asset = state.simAsset;
+    const pot = POTS.find((p) => p.id === asset) || POTS[3];
+    $("simAssets").innerHTML = POTS.map((p) =>
+      `<button type="button" data-asset="${p.id}" class="${p.id === asset ? "on" : ""}">${p.label}</button>`
+    ).join("");
+
+    const b = bandOf(asset);
+    const effectiveStart = startPriceOf(asset);
+    $("bandForm").innerHTML = `
+      <label class="check"><input type="checkbox" data-band="on" ${b.on ? "checked" : ""} /> Band on</label>
+      <label>Buy above (excl.)<input data-band="lo" value="${b.lo ? fmtK(b.lo) : "0"}" /></label>
+      <label>Buy below (excl.)<input data-band="hi" value="${b.hi ? fmtK(b.hi) : "0"}" /></label>
+      <label>Initial batch below<input data-band="initialBelow" value="${b.initialBelow ? fmtK(b.initialBelow) : "0"}" /></label>
+      <label>Start price<input data-band="startPrice" value="${effectiveStart ? fmtK(effectiveStart) : "0"}" /></label>
+      <label>Noise (vol)<input data-band="noise" value="${fmtPct(state.noise * 100)}" /></label>
+    `;
+
+    const sim = simulateAsset(asset, flow[asset], months, held[asset]);
+    drawSpark($("simSpark"), sim);
+    const lastSim = sim.rows[sim.rows.length - 1] || { desired: held[asset], exposed: 0, reserved: held[asset], units: 0 };
+    $("simSummary").textContent = sim.gated
+      ? `Desired ${fmtK(lastSim.desired)}  ·  exposed ${fmtK(lastSim.exposed)}  ·  waiting ${fmtK(lastSim.reserved)}  ·  stacked ${fmtCrypto(lastSim.units)}`
+      : `No band — desired is fully exposed (${fmtK(lastSim.desired)})`;
+
+    $("simTable").innerHTML = `<thead><tr>
+      <th>Month</th><th>Price</th><th>Low</th><th>Band</th>
+      <th>Desired</th><th>Exposed this month</th><th>Exposed cum.</th><th>Waiting</th><th>Stacked</th>
+    </tr></thead><tbody>${sim.rows.map((r, i) => {
+      const kind = i === 0 || i % 12 === 0 ? "year" : "";
+      const band = r.deployedInit && r.deployedMonth ? "month+initial"
+        : r.deployedInit ? "initial"
+        : r.deployedMonth ? "month"
+        : "—";
+      return `<tr class="${kind}">
+        <td>${i === 0 ? monthName(r.month) + " post" : monthName(r.month)}</td>
+        <td>${fmtK(r.price)}</td><td>${fmtK(r.low)}</td>
+        <td class="${r.deployed > 0 ? "fill" : "miss"}">${band}</td>
+        <td>${fmtK(r.desired)}</td>
+        <td class="${r.deployed > 0 ? "fill" : "miss"}">${r.deployed ? fmtK(r.deployed) : "—"}</td>
+        <td>${fmtK(r.exposed)}</td>
+        <td>${fmtK(r.reserved)}</td>
+        <td>${fmtCrypto(r.units)}</td>
+      </tr>`;
+    }).join("")}</tbody>`;
+
+    $("isTable").innerHTML = `<thead><tr>
+      <th>Month</th><th>Desired</th><th>Sim exposed</th><th>Is allocated</th><th>Is price</th><th>vs sim</th><th>vs desired</th>
+    </tr></thead><tbody>${sim.rows.map((r, i) => {
+      const rec = (state.actuals[r.month] || {})[asset] || {};
+      const has = rec.chf != null && rec.chf !== "";
+      const isChf = has ? Number(rec.chf) || 0 : null;
+      const vsSim = isChf == null ? "" : isChf - r.deployed;
+      const vsDes = isChf == null ? "" : isChf - flow[asset];
+      const kind = i === 0 || i % 12 === 0 ? "year" : "";
+      return `<tr class="${kind}">
+        <td>${monthName(r.month)}</td>
+        <td>${fmtK(flow[asset])}</td>
+        <td>${r.deployed ? fmtK(r.deployed) : "—"}</td>
+        <td><input class="cell" data-is="chf" data-month="${r.month}" value="${has ? fmtK(isChf) : ""}" placeholder="—" /></td>
+        <td><input class="cell" data-is="price" data-month="${r.month}" value="${rec.price ? fmtK(rec.price) : ""}" placeholder="—" /></td>
+        <td class="${vsSim === "" ? "" : vsSim >= 0 ? "pos" : "neg"}">${vsSim === "" ? "" : fmtK(vsSim)}</td>
+        <td class="${vsDes === "" ? "" : vsDes >= 0 ? "pos" : "neg"}">${vsDes === "" ? "" : fmtK(vsDes)}</td>
+      </tr>`;
+    }).join("")}</tbody>`;
+  }
+
+  function drawSpark(svg, sim) {
+    const W = 960, H = 92, pad = 8;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren();
+    const pts = sim.path || [];
+    if (!pts.length) return;
+    const ys = pts.flatMap((p) => [p.low, p.high, p.close]);
+    if (sim.gated) { ys.push(sim.lo, sim.hi, sim.initTop); }
+    const min = Math.min(...ys), max = Math.max(...ys);
+    const x = (i) => pad + i * ((W - pad * 2) / Math.max(pts.length - 1, 1));
+    const y = (v) => pad + (1 - (v - min) / (max - min || 1)) * (H - pad * 2);
+    const band = (lo, hi, color) => {
+      const top = y(hi), bot = y(lo);
+      svg.append(ns("rect", { x: pad, y: Math.min(top, bot), width: W - pad * 2, height: Math.max(1, Math.abs(bot - top)), fill: color }));
+    };
+    if (sim.gated) {
+      band(sim.lo, sim.hi, "rgba(247,147,26,0.08)");
+      band(sim.lo, sim.initTop, "rgba(247,147,26,0.14)");
+    }
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.close).toFixed(1)}`).join(" ");
+    svg.append(ns("path", { d, fill: "none", stroke: "#d4d4d4", "stroke-width": "1.4" }));
   }
 
   function ns(tag, attrs) {
@@ -664,6 +946,49 @@
   });
 
   $("refreshRates").addEventListener("click", () => fetchRates(true));
+
+  $("projYears").addEventListener("change", () => {
+    state.projYears = clamp(parseInt($("projYears").value, 10) || 4, 1, 30);
+    render();
+  });
+  $("simAssets").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-asset]");
+    if (!btn) return;
+    state.simAsset = btn.dataset.asset;
+    render();
+  });
+  $("reroll").addEventListener("click", () => {
+    state.simSeed = (Math.imul(state.simSeed || 1, 1664525) + 1013904223) >>> 0;
+    render();
+  });
+  $("bandForm").addEventListener("change", (e) => {
+    const t = e.target;
+    const key = t.dataset.band;
+    if (!key) return;
+    const b = bandOf(state.simAsset);
+    if (key === "on") b.on = t.checked;
+    else if (key === "noise") state.noise = Math.max(0, parsePct(t.value) / 100);
+    else b[key] = Math.max(0, parseAmount(t.value));
+    state.bands[state.simAsset] = b;
+    render();
+  });
+  $("isTable").addEventListener("change", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLInputElement) || !t.dataset.is) return;
+    const month = t.dataset.month;
+    const asset = state.simAsset;
+    if (!state.actuals[month]) state.actuals[month] = {};
+    if (!state.actuals[month][asset]) state.actuals[month][asset] = {};
+    const rec = state.actuals[month][asset];
+    const raw = t.value.trim();
+    if (!raw) {
+      if (t.dataset.is === "chf") delete rec.chf;
+      else delete rec.price;
+    } else {
+      rec[t.dataset.is] = parseChfField(raw);
+    }
+    render();
+  });
 
   $("copyAlloc").addEventListener("click", async () => {
     const c = compute();
