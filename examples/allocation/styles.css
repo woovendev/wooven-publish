@@ -311,7 +311,22 @@ main, footer {
   padding: 4px 6px;
 }
 
-.fund .chf-eq { margin: 8px 0 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fund .avail {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.fund .avail input {
+  flex: 1;
+  font-size: 15px;
+  color: var(--fg);
+  text-align: left;
+  border-bottom-color: var(--line-2);
+}
+.fund .chf-eq, .fund .bucket { margin: 8px 0 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .holdings-bar-wrap { margin-top: 8px; }
 

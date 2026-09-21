@@ -6,7 +6,7 @@
   <title>Allok — monthly allocation</title>
   <meta name="description" content="Track monthly resource allocation in CHF. Sankey of the income split, plus existing pots." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M4 8h24v3H4zm6 7h18v3H10zm10 7h8v3h-8z' fill='%23fff'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
   <header class="top">
@@ -70,7 +70,7 @@
     <section class="panel" aria-labelledby="fundsTitle">
       <div class="panel-head">
         <h2 id="fundsTitle">Existing funds</h2>
-        <p>Already held. All pots start at 0. BTC can be entered in BTC, USDT, or CHF.</p>
+        <p>Invested is already in the pot. Available is liquid, not yet deployed. Real estate starts as 17k invested + 8.225k available (bucket 25.225k). Other assets start with 8.225k liquid.</p>
       </div>
       <div class="rates">
         <label>BTC/CHF <input id="rateBtc" inputmode="decimal" autocomplete="off" /></label>
@@ -100,7 +100,7 @@
     <section class="panel" aria-labelledby="projTitle">
       <div class="panel-head">
         <h2 id="projTitle">Projection</h2>
-        <p>Cumulative pots if this month’s split runs for N years. Living is spent and never added. Green rows are year marks.</p>
+        <p>Cumulative pots if this month’s split runs for N years. Pre is invested + available. Living is spent. Green rows are year marks.</p>
       </div>
       <div class="toolbar">
         <label>Years <input id="projYears" inputmode="numeric" /></label>
@@ -114,12 +114,11 @@
     <section class="panel" aria-labelledby="simTitle">
       <div class="panel-head">
         <h2 id="simTitle">Exposure simulation</h2>
-        <p>Desired column is the pace. Exposed is a random price path that only fills inside the band. Initial batch waits for a print below the initial threshold. Monthly batches fill anywhere in the band. Bounds are exclusive.</p>
+        <p>Price steps once a year in September by the 2012–2025 geometric average (~102%/y). Allocate only while price is below the threshold (default 100k). Missed months sit as waiting. Same params work for any pot.</p>
       </div>
       <div id="simAssets" class="asset-tabs"></div>
       <div id="bandForm" class="band-form"></div>
       <div class="toolbar">
-        <button type="button" id="reroll" class="ghost">Reroll path</button>
         <span id="simSummary" class="muted"></span>
       </div>
       <svg id="simSpark" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simulated price path"></svg>
@@ -145,6 +144,6 @@
   </footer>
 
   <div id="tooltip" class="tooltip" hidden></div>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

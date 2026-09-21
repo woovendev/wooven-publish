@@ -25,26 +25,28 @@
     mix: { taxes: 0, cash: 0, btc: 50, realestate: 50, other: 0 },
   });
 
+  const BTC_YEAR_RETURNS = [1.9333, 54.6301, -0.5759, 0.3437, 1.2375, 13.6903, -0.7348, 0.92, 3.0309, 0.5971, -0.6427, 1.5541, 1.2098, -0.0633];
+  const BTC_GEO_YEARLY = Math.pow(BTC_YEAR_RETURNS.reduce((p, r) => p * (1 + r), 1), 1 / BTC_YEAR_RETURNS.length) - 1;
+
   const DEFAULT_STATE = () => ({
     month: currentMonthId(),
     months: {},
-    funds: { backup: 0, taxes: 0, cash: 0, btc: 0, btcUnit: "BTC", realestate: 0, other: 0 },
+    funds: { backup: 0, taxes: 0, cash: 0, btc: 0, btcUnit: "BTC", realestate: 17000, other: 0 },
+    available: { backup: 0, taxes: 0, cash: 0, btc: 0, realestate: 8225, other: 8225 },
     rates: { btcChf: 69090, usdtChf: 0.823057, fetchedAt: 0 },
     projYears: 4,
-    simSeed: 1,
     simAsset: "btc",
-    noise: 0.55,
     bands: defaultBands(),
     actuals: {},
   });
 
   function defaultBands() {
-    const off = () => ({ on: false, lo: 0, hi: 0, initialBelow: 0, startPrice: 0 });
+    const off = () => ({ on: false, threshold: 0, yearlyReturn: 0, startPrice: 0 });
     return {
       backup: off(),
       taxes: off(),
       cash: off(),
-      btc: { on: true, lo: 35000, hi: 65000, initialBelow: 55000, startPrice: 0 },
+      btc: { on: true, threshold: 100000, yearlyReturn: BTC_GEO_YEARLY, startPrice: 0 },
       realestate: off(),
       other: off(),
     };
@@ -67,11 +69,22 @@
       const base = DEFAULT_STATE();
       const bands = defaultBands();
       const parsedBands = parsed.bands || {};
-      for (const k of Object.keys(bands)) bands[k] = { ...bands[k], ...(parsedBands[k] || {}) };
+      for (const k of Object.keys(bands)) {
+        const incoming = parsedBands[k] || {};
+        bands[k] = incoming.threshold != null || incoming.yearlyReturn != null
+          ? { ...bands[k], ...incoming }
+          : bands[k];
+      }
+      const available = { ...base.available, ...(parsed.available || {}) };
+      if (!parsed.available) {
+        if (available.realestate === 0) available.realestate = 8225;
+        if (available.other === 0) available.other = 8225;
+      }
       return {
         ...base,
         ...parsed,
         funds: { ...base.funds, ...(parsed.funds || {}) },
+        available,
         rates: { ...base.rates, ...(parsed.rates || {}) },
         months: parsed.months || {},
         bands,
@@ -145,7 +158,7 @@
 
   function fmtK(n) {
     const k = n / 1000;
-    const digits = Math.abs(k - Math.round(k)) < 1e-9 ? 0 : 2;
+    const digits = Math.abs(k - Math.round(k)) < 1e-9 ? 0 : Math.abs(k) < 10 ? 3 : 2;
     let s = fmtNum(k, digits);
     if (digits) s = s.replace(/0+$/, "").replace(/\.$/, "");
     return s + "k";
@@ -211,16 +224,19 @@
     };
   }
 
+  function investedOf(id) {
+    if (id === "btc") return btcChf();
+    return Math.max(0, state.funds[id] || 0);
+  }
+
+  function availableOf(id) {
+    return Math.max(0, (state.available || {})[id] || 0);
+  }
+
   function holdingsChf() {
-    const f = state.funds;
-    return {
-      backup: f.backup,
-      taxes: f.taxes,
-      cash: f.cash,
-      btc: btcChf(),
-      realestate: f.realestate,
-      other: f.other,
-    };
+    const o = {};
+    for (const p of POTS) o[p.id] = investedOf(p.id) + availableOf(p.id);
+    return o;
   }
 
   function snapshotMonth(m) {
@@ -322,27 +338,30 @@
   }
 
   function renderFunds() {
-    const h = holdingsChf();
     $("fundsGrid").innerHTML = POTS.map((p) => {
-      if (p.crypto) {
-        return `<div class="fund">
-          <h3><span class="dot" style="background:${p.color}"></span>${p.label}</h3>
-          <div class="amt">
+      const inv = investedOf(p.id);
+      const av = availableOf(p.id);
+      const investedInput = p.crypto
+        ? `<div class="amt">
             <input data-fund="btc" value="${fmtCrypto(state.funds.btc)}" inputmode="decimal" />
             <select data-unit="btcUnit">
               ${["BTC", "USDT", "CHF"].map((u) => `<option${u === state.funds.btcUnit ? " selected" : ""}>${u}</option>`).join("")}
             </select>
-          </div>
-          <p class="chf-eq">${fmtChf(h.btc)}</p>
-        </div>`;
-      }
+          </div>`
+        : `<div class="amt">
+            <input data-fund="${p.id}" value="${fmtInputChf(state.funds[p.id])}" inputmode="decimal" />
+            <span class="muted">CHF</span>
+          </div>`;
       return `<div class="fund">
         <h3><span class="dot" style="background:${p.color}"></span>${p.label}</h3>
-        <div class="amt">
-            <input data-fund="${p.id}" value="${fmtInputChf(state.funds[p.id])}" inputmode="decimal" />
-          <span class="muted">CHF</span>
+        <p class="muted" style="margin:0 0 6px;font-size:11px">Invested</p>
+        ${investedInput}
+        <div class="avail">
+          <span>Available</span>
+          <input data-avail="${p.id}" value="${fmtInputChf(av)}" inputmode="decimal" />
+          <span>CHF</span>
         </div>
-        <p class="chf-eq">${fmtChf(state.funds[p.id])}</p>
+        <p class="bucket">bucket ${fmtChf(inv + av)}  ·  invested ${fmtChf(inv)}</p>
       </div>`;
     }).join("");
   }
@@ -402,22 +421,6 @@
     return new Date(y, m - 1, 1).toLocaleString("en", { month: "long", year: "numeric" });
   }
 
-  function mulberry32(a) {
-    return function rng() {
-      a |= 0;
-      a = a + 0x6D2B79F5 | 0;
-      let t = Math.imul(a ^ a >>> 15, 1 | a);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
-
-  function gauss(rng) {
-    const u = rng() || 1e-12;
-    const v = rng();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-  }
-
   function bandOf(id) {
     return state.bands[id] || defaultBands()[id];
   }
@@ -429,91 +432,49 @@
     return 0;
   }
 
-  function inOpen(x, lo, hi) {
-    return x > lo && x < hi;
-  }
-
-  function rangeHits(low, high, lo, hi) {
-    return high > lo && low < hi;
-  }
-
-  function clip(x, lo, hi) {
-    return Math.min(hi, Math.max(lo, x));
-  }
-
-  function simulatePath(start, n, rng, vol) {
-    let px = Math.max(start, 1e-9);
-    const rows = [];
-    for (let i = 0; i < n; i++) {
-      const z = gauss(rng);
-      const mv = Math.max(0, vol) / Math.sqrt(12);
-      const close = px * Math.exp(-0.5 * mv * mv + mv * z);
-      const span = mv * (0.7 + 1.5 * rng());
-      const low = Math.min(px, close) * Math.exp(-span);
-      const high = Math.max(px, close) * Math.exp(span);
-      rows.push({ open: px, close, low, high });
-      px = close;
-    }
-    return rows;
-  }
-
-  function simulateAsset(id, flow, months, holdings) {
+  function simulateAsset(id, flow, months) {
     const b = bandOf(id);
     const n = months.length;
-    const start = startPriceOf(id);
-    const rng = mulberry32((state.simSeed ^ (id.charCodeAt(0) * 997)) >>> 0);
-    const path = b.on && start > 0 ? simulatePath(start, n, rng, state.noise) : months.map(() => {
-      const p = start || 1;
-      return { open: p, close: p, low: p, high: p };
-    });
-    const gated = b.on && b.lo < b.hi;
-    const lo = b.lo, hi = b.hi;
-    const initTop = b.initialBelow > 0 ? Math.min(b.initialBelow, hi) : lo;
-    let initialReserve = holdings;
-    let monthlyReserve = 0;
-    let exposed = 0;
+    let price = startPriceOf(id) || 1;
+    const yearly = b.yearlyReturn || 0;
+    const gated = b.on && b.threshold > 0;
+    const threshold = b.threshold || 0;
+    let available = availableOf(id);
     let units = 0;
-    let desired = holdings;
+    const startInvested = investedOf(id);
+    if (price > 0 && startInvested > 0) units = startInvested / price;
+    let desired = startInvested + available;
+    let exposed = startInvested;
     const rows = [];
+    const path = [];
     for (let i = 0; i < n; i++) {
-      const px = path[i];
-      monthlyReserve += flow;
+      if (i > 0 && i % 12 === 0) price *= (1 + yearly);
+      available += flow;
       desired += flow;
-      let deployedInit = 0, deployedMonth = 0, fill = 0;
-      const hitMonth = !gated || rangeHits(px.low, px.high, lo, hi);
-      const hitInit = !gated || rangeHits(px.low, px.high, lo, initTop);
-      if (hitInit && initialReserve > 0) {
-        fill = gated ? clip(px.low, lo + 1e-9, initTop - 1e-9) : (px.close || 1);
-        deployedInit = initialReserve;
-        if (fill > 0) units += deployedInit / fill;
-        exposed += deployedInit;
-        initialReserve = 0;
+      const canBuy = !gated || price < threshold;
+      let deployed = 0;
+      if (canBuy && available > 0 && price > 0) {
+        deployed = available;
+        units += deployed / price;
+        exposed += deployed;
+        available = 0;
       }
-      if (hitMonth && monthlyReserve > 0) {
-        fill = gated ? clip(px.low, lo + 1e-9, hi - 1e-9) : (px.close || 1);
-        deployedMonth = monthlyReserve;
-        if (fill > 0) units += deployedMonth / fill;
-        exposed += deployedMonth;
-        monthlyReserve = 0;
-      }
+      const invested = units * price;
+      path.push({ close: price, low: price, high: price });
       rows.push({
         month: months[i],
-        price: px.close,
-        low: px.low,
-        high: px.high,
-        hitMonth,
-        hitInit,
-        deployedInit,
-        deployedMonth,
-        deployed: deployedInit + deployedMonth,
+        price,
+        canBuy,
+        deployed,
         desired,
-        reserved: initialReserve + monthlyReserve,
-        exposed,
+        reserved: available,
+        exposed: invested,
         units,
-        fill,
+        invested,
+        yearCut: i > 0 && i % 12 === 0,
       });
     }
-    return { rows, path, gated, lo, hi, initTop, start };
+    return { rows, path, gated, threshold, start: startPriceOf(id), yearly };
   }
 
   function renderForecast(c) {
@@ -526,9 +487,7 @@
     const flow = monthlyFlow(c);
     const held = holdingsChf();
     const bals = { ...held };
-
-    const visiblePots = POTS.filter((p) => held[p.id] > 0 || flow[p.id] > 0);
-    const cols = visiblePots.length ? visiblePots : POTS;
+    const cols = POTS;
 
     const head = ["Month", ...cols.map((p) => p.label), "Baseline"];
     const body = [];
@@ -547,7 +506,7 @@
       body.map((r) => `<tr class="${r.kind}"><td>${r.label}</td>${r.cells.map((v) => `<td>${fmtK(v)}</td>`).join("")}<td class="fill">${fmtK(r.base)}</td></tr>`).join("")
     }</tbody>`;
     const last = body[body.length - 1];
-    $("projSummary").textContent = `After ${years}y  baseline ${fmtChf(last.base)}  ·  BTC ${fmtK(bals.btc)}  ·  real estate ${fmtK(bals.realestate)}`;
+    $("projSummary").textContent = `After ${years}y  baseline ${fmtChf(last.base)}  ·  BTC ${fmtK(bals.btc)}  ·  real estate ${fmtK(bals.realestate)}  ·  other ${fmtK(bals.other)}`;
 
     const asset = state.simAsset;
     const pot = POTS.find((p) => p.id === asset) || POTS[3];
@@ -558,37 +517,32 @@
     const b = bandOf(asset);
     const effectiveStart = startPriceOf(asset);
     $("bandForm").innerHTML = `
-      <label class="check"><input type="checkbox" data-band="on" ${b.on ? "checked" : ""} /> Band on</label>
-      <label>Buy above (excl.)<input data-band="lo" value="${b.lo ? fmtK(b.lo) : "0"}" /></label>
-      <label>Buy below (excl.)<input data-band="hi" value="${b.hi ? fmtK(b.hi) : "0"}" /></label>
-      <label>Initial batch below<input data-band="initialBelow" value="${b.initialBelow ? fmtK(b.initialBelow) : "0"}" /></label>
+      <label class="check"><input type="checkbox" data-band="on" ${b.on ? "checked" : ""} /> Allocate on threshold</label>
+      <label>Allocate below<input data-band="threshold" value="${b.threshold ? fmtK(b.threshold) : "0"}" /></label>
+      <label>Yearly return<input data-band="yearlyReturn" value="${fmtPct((b.yearlyReturn || 0) * 100)}" /></label>
       <label>Start price<input data-band="startPrice" value="${effectiveStart ? fmtK(effectiveStart) : "0"}" /></label>
-      <label>Noise (vol)<input data-band="noise" value="${fmtPct(state.noise * 100)}" /></label>
     `;
 
-    const sim = simulateAsset(asset, flow[asset], months, held[asset]);
+    const sim = simulateAsset(asset, flow[asset], months);
     drawSpark($("simSpark"), sim);
-    const lastSim = sim.rows[sim.rows.length - 1] || { desired: held[asset], exposed: 0, reserved: held[asset], units: 0 };
+    const lastSim = sim.rows[sim.rows.length - 1] || { desired: 0, invested: 0, reserved: 0, units: 0 };
+    const retPct = fmtPct((sim.yearly || 0) * 100);
     $("simSummary").textContent = sim.gated
-      ? `Desired ${fmtK(lastSim.desired)}  ·  exposed ${fmtK(lastSim.exposed)}  ·  waiting ${fmtK(lastSim.reserved)}  ·  stacked ${fmtCrypto(lastSim.units)}`
-      : `No band — desired is fully exposed (${fmtK(lastSim.desired)})`;
+      ? `${retPct}%/y each September  ·  buy < ${fmtK(sim.threshold)}  ·  desired ${fmtK(lastSim.desired)}  ·  invested ${fmtK(lastSim.invested)}  ·  waiting ${fmtK(lastSim.reserved)}  ·  stacked ${fmtCrypto(lastSim.units)}`
+      : `No threshold — monthly flow is fully allocated  ·  ${retPct}%/y each September`;
 
     $("simTable").innerHTML = `<thead><tr>
-      <th>Month</th><th>Price</th><th>Low</th><th>Band</th>
-      <th>Desired</th><th>Exposed this month</th><th>Exposed cum.</th><th>Waiting</th><th>Stacked</th>
+      <th>Month</th><th>Price</th><th>Below</th>
+      <th>Desired</th><th>Allocated</th><th>Invested</th><th>Waiting</th><th>Stacked</th>
     </tr></thead><tbody>${sim.rows.map((r, i) => {
       const kind = i === 0 || i % 12 === 0 ? "year" : "";
-      const band = r.deployedInit && r.deployedMonth ? "month+initial"
-        : r.deployedInit ? "initial"
-        : r.deployedMonth ? "month"
-        : "—";
       return `<tr class="${kind}">
         <td>${i === 0 ? monthName(r.month) + " post" : monthName(r.month)}</td>
-        <td>${fmtK(r.price)}</td><td>${fmtK(r.low)}</td>
-        <td class="${r.deployed > 0 ? "fill" : "miss"}">${band}</td>
+        <td>${fmtK(r.price)}</td>
+        <td class="${r.canBuy ? "fill" : "miss"}">${r.canBuy ? "yes" : "no"}</td>
         <td>${fmtK(r.desired)}</td>
         <td class="${r.deployed > 0 ? "fill" : "miss"}">${r.deployed ? fmtK(r.deployed) : "—"}</td>
-        <td>${fmtK(r.exposed)}</td>
+        <td>${fmtK(r.invested)}</td>
         <td>${fmtK(r.reserved)}</td>
         <td>${fmtCrypto(r.units)}</td>
       </tr>`;
@@ -616,26 +570,26 @@
   }
 
   function drawSpark(svg, sim) {
-    const W = 960, H = 92, pad = 8;
+    const W = 960, H = 92, pad = 10;
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.replaceChildren();
     const pts = sim.path || [];
     if (!pts.length) return;
-    const ys = pts.flatMap((p) => [p.low, p.high, p.close]);
-    if (sim.gated) { ys.push(sim.lo, sim.hi, sim.initTop); }
-    const min = Math.min(...ys), max = Math.max(...ys);
+    const ys = pts.map((p) => p.close);
+    if (sim.gated) ys.push(sim.threshold);
+    const min = Math.min(...ys) * 0.92, max = Math.max(...ys) * 1.08;
     const x = (i) => pad + i * ((W - pad * 2) / Math.max(pts.length - 1, 1));
     const y = (v) => pad + (1 - (v - min) / (max - min || 1)) * (H - pad * 2);
-    const band = (lo, hi, color) => {
-      const top = y(hi), bot = y(lo);
-      svg.append(ns("rect", { x: pad, y: Math.min(top, bot), width: W - pad * 2, height: Math.max(1, Math.abs(bot - top)), fill: color }));
-    };
     if (sim.gated) {
-      band(sim.lo, sim.hi, "rgba(247,147,26,0.08)");
-      band(sim.lo, sim.initTop, "rgba(247,147,26,0.14)");
+      const ty = y(sim.threshold);
+      svg.append(ns("line", { x1: pad, x2: W - pad, y1: ty, y2: ty, stroke: "rgba(247,147,26,0.55)", "stroke-dasharray": "4 4" }));
     }
-    const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.close).toFixed(1)}`).join(" ");
-    svg.append(ns("path", { d, fill: "none", stroke: "#d4d4d4", "stroke-width": "1.4" }));
+    let d = "";
+    pts.forEach((p, i) => {
+      const X = x(i), Y = y(p.close);
+      d += i === 0 ? `M${X},${Y}` : ` H${X} V${Y}`;
+    });
+    svg.append(ns("path", { d, fill: "none", stroke: "#d4d4d4", "stroke-width": "1.5" }));
   }
 
   function ns(tag, attrs) {
@@ -905,16 +859,23 @@
 
   $("fundsGrid").addEventListener("input", (e) => {
     const t = e.target;
-    if (!(t instanceof HTMLInputElement) || !t.dataset.fund) return;
-    if (t.dataset.fund === "btc") state.funds.btc = parseAmount(t.value);
-    else state.funds[t.dataset.fund] = Math.max(0, parseAmount(t.value));
+    if (!(t instanceof HTMLInputElement)) return;
+    if (t.dataset.avail) {
+      if (!state.available) state.available = {};
+      state.available[t.dataset.avail] = Math.max(0, parseAmount(t.value));
+    } else if (t.dataset.fund === "btc") state.funds.btc = parseAmount(t.value);
+    else if (t.dataset.fund) state.funds[t.dataset.fund] = Math.max(0, parseAmount(t.value));
+    else return;
     save();
     drawHoldings();
     renderAfter(compute());
-    const eq = t.closest(".fund")?.querySelector(".chf-eq");
-    if (eq) {
-      const h = holdingsChf();
-      eq.textContent = fmtChf(t.dataset.fund === "btc" ? h.btc : h[t.dataset.fund]);
+    const card = t.closest(".fund");
+    const id = t.dataset.avail || t.dataset.fund;
+    const bucket = card?.querySelector(".bucket");
+    if (bucket && id) {
+      const inv = investedOf(id);
+      const av = availableOf(id);
+      bucket.textContent = `bucket ${fmtChf(inv + av)}  ·  invested ${fmtChf(inv)}`;
     }
   });
   $("fundsGrid").addEventListener("change", (e) => {
@@ -929,11 +890,7 @@
       render();
       return;
     }
-    if (t.dataset.fund) {
-      if (t.dataset.fund === "btc") state.funds.btc = parseAmount(t.value);
-      else state.funds[t.dataset.fund] = Math.max(0, parseAmount(t.value));
-      render();
-    }
+    if (t.dataset.fund || t.dataset.avail) render();
   });
 
   $("rateBtc").addEventListener("change", () => {
@@ -957,17 +914,13 @@
     state.simAsset = btn.dataset.asset;
     render();
   });
-  $("reroll").addEventListener("click", () => {
-    state.simSeed = (Math.imul(state.simSeed || 1, 1664525) + 1013904223) >>> 0;
-    render();
-  });
   $("bandForm").addEventListener("change", (e) => {
     const t = e.target;
     const key = t.dataset.band;
     if (!key) return;
     const b = bandOf(state.simAsset);
     if (key === "on") b.on = t.checked;
-    else if (key === "noise") state.noise = Math.max(0, parsePct(t.value) / 100);
+    else if (key === "yearlyReturn") b.yearlyReturn = parsePct(t.value) / 100;
     else b[key] = Math.max(0, parseAmount(t.value));
     state.bands[state.simAsset] = b;
     render();
