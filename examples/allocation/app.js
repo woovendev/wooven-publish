@@ -569,6 +569,7 @@
     $("income").value = fmtIncomeInput(c.income);
     $("incomeFull").textContent = fmtChf(c.income);
     drawIncomeSankey(c);
+    renderLegend(c);
     renderAfter(c);
   }
 
@@ -589,6 +590,7 @@
     const c = compute();
     $("incomeFull").textContent = fmtChf(c.income);
     drawIncomeSankey(c);
+    renderLegend(c);
     renderAfter(c);
     save();
   });

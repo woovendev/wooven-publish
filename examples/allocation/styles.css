@@ -188,7 +188,7 @@ main, footer {
   font-variant-numeric: tabular-nums;
 }
 .legend span { display: inline-flex; align-items: center; }
-.pct-mark { color: var(--muted); margin-left: 1px; }
+.pct-mark { color: var(--muted); margin-left: -2px; }
 #sankey, #holdings {
   display: block;
   width: 100%;
@@ -234,7 +234,7 @@ main, footer {
   min-width: 0;
 }
 
-.row input.pct { width: 4.6rem; font-size: 15px; }
+.row input.pct { width: 3.4rem; font-size: 15px; }
 .row input.chf-edit { width: 7.2rem; color: var(--muted); font-size: 13px; }
 .row input:focus, .fund input:focus, .rates input:focus, #income:focus {
   outline: none;
