@@ -80,6 +80,33 @@
     return Number.isFinite(n) ? n * mul : 0;
   }
 
+  /* Income field is kCHF. "1000" and "1000k" both mean 1'000'000. Big bare numbers are francs. */
+  function parseIncome(raw) {
+    const s = String(raw).trim().toLowerCase().replace(/chf/g, "").replace(/['’′\s,_]/g, "");
+    if (!s) return 0;
+    if (s.endsWith("m") || s.endsWith("k")) return parseAmount(raw);
+    const n = Number(s.replace(",", "."));
+    if (!Number.isFinite(n)) return 0;
+    return Math.abs(n) >= 10_000 ? n : n * 1000;
+  }
+
+  function parseChfField(raw) {
+    const s = String(raw).trim().toLowerCase().replace(/chf/g, "").replace(/['’′\s,_]/g, "");
+    if (!s) return 0;
+    if (s.endsWith("m") || s.endsWith("k")) return parseAmount(raw);
+    const n = Number(s.replace(",", "."));
+    if (!Number.isFinite(n)) return 0;
+    return Math.abs(n) >= 10_000 ? n : n * 1000;
+  }
+
+  function fmtIncomeInput(n) {
+    const k = n / 1000;
+    const digits = Math.abs(k - Math.round(k)) < 1e-9 ? 0 : 2;
+    let s = fmtNum(k, digits);
+    if (digits) s = s.replace(/0+$/, "").replace(/\.$/, "");
+    return s;
+  }
+
   function parsePct(raw) {
     const n = Number(String(raw).replace(",", ".").replace("%", "").trim());
     return Number.isFinite(n) ? n : 0;
@@ -199,7 +226,7 @@
   function render() {
     const c = compute();
     $("month").value = state.month;
-    $("income").value = fmtK(c.income);
+    $("income").value = fmtIncomeInput(c.income);
     $("incomeFull").textContent = fmtChf(c.income);
     $("rateBtc").value = fmtNum(state.rates.btcChf, 0);
     $("rateUsdt").value = fmtNum(state.rates.usdtChf, 6).replace(/0+$/, "").replace(/\.$/, "");
@@ -522,10 +549,10 @@
     const t = e.target;
     if (!(t instanceof HTMLInputElement)) return;
     if (t.dataset.field) applyField(t.dataset.field, parsePct(t.value));
-    if (t.dataset.chf) applyChf(t.dataset.chf, parseAmount(t.value));
+    if (t.dataset.chf) applyChf(t.dataset.chf, parseChfField(t.value));
     save();
     const c = compute();
-    $("income").value = fmtK(c.income);
+    $("income").value = fmtIncomeInput(c.income);
     $("incomeFull").textContent = fmtChf(c.income);
     drawIncomeSankey(c);
     renderAfter(c);
@@ -544,7 +571,7 @@
   });
 
   $("income").addEventListener("input", () => {
-    monthData().income = Math.max(0, parseAmount($("income").value));
+    monthData().income = Math.max(0, parseIncome($("income").value));
     const c = compute();
     $("incomeFull").textContent = fmtChf(c.income);
     drawIncomeSankey(c);
@@ -552,11 +579,15 @@
     save();
   });
   $("income").addEventListener("change", () => {
-    monthData().income = Math.max(0, parseAmount($("income").value));
+    monthData().income = Math.max(0, parseIncome($("income").value));
     render();
   });
   $("income").addEventListener("keydown", (e) => {
     if (e.key === "Enter") e.target.blur();
+  });
+
+  document.addEventListener("focusin", (e) => {
+    if (e.target instanceof HTMLInputElement && e.target.type !== "month") e.target.select();
   });
 
   $("month").addEventListener("change", () => {
