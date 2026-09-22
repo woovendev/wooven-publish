@@ -732,7 +732,7 @@
       nodes.push({ id: "unalloc", col: 3, value: c.unallocChf, label: "Unallocated", color: "#3a3a3a" });
       links.push({ from: "invest", to: "unalloc", value: c.unallocChf, color: "#3a3a3a" });
     }
-    drawSankey($("sankey"), nodes, links, c.income, { height: 520, shareLabel: "of income" });
+    drawSankey($("sankey"), nodes, links, c.income, { height: 640, shareLabel: "of income", fan: true });
   }
 
   function cssColor(v) {
@@ -781,13 +781,13 @@
     drawSankey(svg, nodes, links, total, { height: 220, shareLabel: "of holdings" });
   }
 
-  function drawSankey(svg, nodes, links, total, { height, shareLabel }) {
+  function drawSankey(svg, nodes, links, total, { height, shareLabel, fan }) {
     const W = 960, H = height, padT = 18, padB = 22, padL = 108, padR = 148;
     const nodeW = 14;
     const cols = Math.max(...nodes.map((n) => n.col));
     const byCol = [];
     for (let i = 0; i <= cols; i++) byCol[i] = nodes.filter((n) => n.col === i && n.value > 0);
-    const gap = 6;
+    const gap = fan ? 10 : 6;
     const innerH = H - padT - padB;
     const maxGaps = Math.max(0, ...byCol.map((c) => Math.max(0, c.length - 1)));
     const scale = total > 0 ? (innerH - maxGaps * gap) / total : 0;
@@ -810,30 +810,52 @@
           const src = incoming.from;
           if (srcCursor[src] == null) srcCursor[src] = layout[src].y;
           y = srcCursor[src];
-          srcCursor[src] += h;
+          srcCursor[src] += h + (fan ? gap : 0);
         }
         layout[n.id] = { ...n, x: colX(i), y, h };
       }
       const packed = (byCol[i] || []).map((n) => layout[n.id]).sort((a, b) => a.y - b.y);
       for (let k = 1; k < packed.length; k++) {
-        const minY = packed[k - 1].y + packed[k - 1].h;
+        const minY = packed[k - 1].y + packed[k - 1].h + (fan ? gap : 0);
         if (packed[k].y < minY) packed[k].y = minY;
       }
     }
 
-    const last = byCol[cols] || [];
-    const lastSum = last.reduce((s, n) => s + n.value, 0);
-    if (cols >= 2 && last.length >= 2 && lastSum < total * 0.85) {
-      const top = padT;
-      const bot = layout[byCol[0][0].id] ? layout[byCol[0][0].id].y + layout[byCol[0][0].id].h : padT + innerH;
-      const laid = last.map((n) => layout[n.id]);
-      const sumH = laid.reduce((s, n) => s + n.h, 0);
-      const leftover = Math.max(0, bot - top - sumH);
-      const g = leftover / (laid.length + 1);
-      let y = top + g;
-      for (const n of laid) {
-        n.y = y;
-        y += n.h + g;
+    const kidsOf = (id) => links.filter((l) => l.from === id && layout[l.to]).map((l) => layout[l.to]);
+    const fanFrom = (id, span) => {
+      const parent = layout[id];
+      const kids = kidsOf(id);
+      if (!parent || kids.length < 2) return;
+      const sumH = kids.reduce((s, k) => s + k.h, 0);
+      const target = span != null ? span : sumH + gap * (kids.length - 1);
+      const leftover = Math.max(0, target - sumH);
+      const g = kids.length > 1 ? leftover / (kids.length - 1) : 0;
+      let y = parent.y;
+      for (const k of kids) {
+        k.y = y;
+        y += k.h + g;
+      }
+    };
+
+    if (fan) {
+      fanFrom("living");
+      const livingKids = kidsOf("living");
+      if (layout.saved && livingKids.length) {
+        const tail = livingKids[livingKids.length - 1];
+        layout.saved.y = Math.max(layout.saved.y, tail.y + tail.h + gap);
+      }
+      fanFrom("saved");
+      const last = byCol[cols] || [];
+      const lastSum = last.reduce((s, n) => s + n.value, 0);
+      if (cols >= 2 && last.length >= 2 && lastSum < total * 0.85) {
+        const top = padT;
+        const bot = layout[byCol[0][0].id] ? layout[byCol[0][0].id].y + layout[byCol[0][0].id].h : padT + innerH;
+        fanFrom("invest", bot - top);
+        const investKids = kidsOf("invest");
+        if (investKids.length) {
+          const shift = top + (bot - top - (investKids[investKids.length - 1].y + investKids[investKids.length - 1].h - investKids[0].y)) / 2 - investKids[0].y;
+          for (const k of investKids) k.y += shift;
+        }
       }
     }
 
