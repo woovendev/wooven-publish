@@ -782,28 +782,42 @@
   }
 
   function drawSankey(svg, nodes, links, total, { height, shareLabel }) {
-    const W = 960, H = height, padT = 18, padB = 22, padL = 108, padR = 132;
+    const W = 960, H = height, padT = 18, padB = 22, padL = 108, padR = 148;
     const nodeW = 14;
     const cols = Math.max(...nodes.map((n) => n.col));
     const byCol = [];
     for (let i = 0; i <= cols; i++) byCol[i] = nodes.filter((n) => n.col === i && n.value > 0);
-    const gap = 10;
+    const gap = 6;
     const innerH = H - padT - padB;
-    const scale = total > 0 ? innerH / total : 0;
-    const usableH = (col) => innerH - Math.max(0, byCol[col].length - 1) * gap;
-    const colScale = (col) => {
-      const sum = byCol[col].reduce((s, n) => s + n.value, 0);
-      return sum > 0 ? usableH(col) / sum : scale;
-    };
+    const maxGaps = Math.max(0, ...byCol.map((c) => Math.max(0, c.length - 1)));
+    const scale = total > 0 ? Math.max(0.001, (innerH - maxGaps * gap) / total) : 0;
+    const colX = (i) => padL + i * ((W - padL - padR - nodeW) / Math.max(cols, 1));
+    const nodeH = (n) => Math.max(2, n.value * scale);
 
     const layout = {};
-    for (let i = 0; i <= cols; i++) {
-      const sc = colScale(i);
-      let y = padT;
-      for (const n of byCol[i]) {
-        const h = Math.max(2, n.value * sc);
-        layout[n.id] = { ...n, x: padL + i * ((W - padL - padR - nodeW) / Math.max(cols, 1)), y, h };
-        y += h + gap;
+    const srcCursor = {};
+    let y0 = padT;
+    for (const n of byCol[0] || []) {
+      layout[n.id] = { ...n, x: colX(0), y: y0, h: nodeH(n) };
+      y0 += layout[n.id].h + gap;
+    }
+    for (let i = 1; i <= cols; i++) {
+      for (const n of byCol[i] || []) {
+        const incoming = links.find((l) => l.to === n.id && layout[l.from]);
+        const h = nodeH(n);
+        let y = padT;
+        if (incoming) {
+          const src = incoming.from;
+          if (srcCursor[src] == null) srcCursor[src] = layout[src].y;
+          y = srcCursor[src];
+          srcCursor[src] += h + gap;
+        }
+        layout[n.id] = { ...n, x: colX(i), y, h };
+      }
+      const packed = (byCol[i] || []).map((n) => layout[n.id]).sort((a, b) => a.y - b.y);
+      for (let k = 1; k < packed.length; k++) {
+        const minY = packed[k - 1].y + packed[k - 1].h + gap;
+        if (packed[k].y < minY) packed[k].y = minY;
       }
     }
 
