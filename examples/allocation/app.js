@@ -810,13 +810,13 @@
           const src = incoming.from;
           if (srcCursor[src] == null) srcCursor[src] = layout[src].y;
           y = srcCursor[src];
-          srcCursor[src] += h + gap;
+          srcCursor[src] += h;
         }
         layout[n.id] = { ...n, x: colX(i), y, h };
       }
       const packed = (byCol[i] || []).map((n) => layout[n.id]).sort((a, b) => a.y - b.y);
       for (let k = 1; k < packed.length; k++) {
-        const minY = packed[k - 1].y + packed[k - 1].h + gap;
+        const minY = packed[k - 1].y + packed[k - 1].h;
         if (packed[k].y < minY) packed[k].y = minY;
       }
     }
