@@ -790,7 +790,7 @@
     const gap = 6;
     const innerH = H - padT - padB;
     const maxGaps = Math.max(0, ...byCol.map((c) => Math.max(0, c.length - 1)));
-    const scale = total > 0 ? Math.max(0.001, (innerH - maxGaps * gap) / total) : 0;
+    const scale = total > 0 ? (innerH - maxGaps * gap) / total : 0;
     const colX = (i) => padL + i * ((W - padL - padR - nodeW) / Math.max(cols, 1));
     const nodeH = (n) => Math.max(2, n.value * scale);
 
