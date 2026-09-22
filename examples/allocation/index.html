@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Allok — monthly allocation</title>
+  <meta name="description" content="Track monthly resource allocation in CHF. Sankey of the income split, plus existing pots." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Cpath d='M4 8h24v3H4zm6 7h18v3H10zm10 7h8v3h-8z' fill='%23fff'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css?v=12" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <h1>Allok</h1>
+        <p>Monthly resource allocation · CHF</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <label class="month-wrap">
+        <span class="sr">Month</span>
+        <button type="button" id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
+        <input id="month" type="month" />
+        <button type="button" id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
+      </label>
+      <button type="button" id="resetMonth" class="ghost">Reset month</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="income-card">
+      <div class="income-copy">
+        <h2>Net income</h2>
+        <p>Starts at <strong>1'000k CHF</strong>. Change it — every breakdown follows.</p>
+      </div>
+      <label class="income-field">
+        <span class="sr">Net income in thousands of CHF</span>
+        <input id="income" inputmode="decimal" autocomplete="off" spellcheck="false" />
+        <span class="suffix">k CHF</span>
+      </label>
+      <p id="incomeFull" class="income-full"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="sankeyTitle">
+      <div class="panel-head">
+        <h2 id="sankeyTitle">Sankey funnel</h2>
+        <p>This month’s split. Width is share of net income.</p>
+      </div>
+      <div class="sankey-wrap">
+        <svg id="sankey" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Income allocation sankey"></svg>
+      </div>
+      <div id="sankeyLegend" class="legend"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="allocTitle">
+      <div class="panel-head row-head">
+        <h2 id="allocTitle">Allocation</h2>
+        <button type="button" id="copyAlloc" class="icon-btn" title="Copy allocation" aria-label="Copy allocation">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </button>
+      </div>
+      <div id="allocTable" class="sheet"></div>
+      <p id="mixWarn" class="warn" hidden></p>
+    </section>
+
+    <section class="panel" aria-labelledby="fundsTitle">
+      <div class="panel-head">
+        <h2 id="fundsTitle">Existing funds</h2>
+        <p>Invested is already in the pot. Available is liquid, not yet deployed. Real estate starts as 17k invested + 8.225k available (bucket 25.225k). Other assets start with 8.225k liquid.</p>
+      </div>
+      <div class="rates">
+        <label>BTC/CHF <input id="rateBtc" inputmode="decimal" autocomplete="off" /></label>
+        <label>USDT/CHF <input id="rateUsdt" inputmode="decimal" autocomplete="off" /></label>
+        <button type="button" id="refreshRates" class="ghost">Fetch rates</button>
+        <span id="rateStatus" class="muted"></span>
+      </div>
+      <div id="fundsGrid" class="funds-grid"></div>
+      <div class="holdings-bar-wrap">
+        <div class="panel-head tight">
+          <h3>Holdings</h3>
+          <span id="holdingsTotal" class="muted"></span>
+        </div>
+        <svg id="holdings" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Existing funds sankey"></svg>
+        <p id="holdingsEmpty" class="empty">No holdings yet. Add amounts to the pots above.</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="afterTitle">
+      <div class="panel-head">
+        <h2 id="afterTitle">After this month</h2>
+        <p>Existing funds plus this month’s allocated CHF (living is spent, not added).</p>
+      </div>
+      <div id="afterTable" class="sheet after"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="projTitle">
+      <div class="panel-head">
+        <h2 id="projTitle">Projection</h2>
+        <p>Cumulative pots if this month’s split runs for N years. Pre is invested + available. Living is spent. Green rows are year marks.</p>
+      </div>
+      <div class="toolbar">
+        <label>Years <input id="projYears" inputmode="numeric" /></label>
+        <span id="projSummary" class="muted"></span>
+      </div>
+      <div class="grid-wrap">
+        <table class="grid" id="projTable"></table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="simTitle">
+      <div class="panel-head">
+        <h2 id="simTitle">Exposure simulation</h2>
+        <p>Price steps once a year in September by the 2012–2025 geometric average (~102%/y). Allocate only while price is below the threshold (default 100k). Missed months sit as waiting. Same params work for any pot.</p>
+      </div>
+      <div id="simAssets" class="asset-tabs"></div>
+      <div id="bandForm" class="band-form"></div>
+      <div class="toolbar">
+        <span id="simSummary" class="muted"></span>
+      </div>
+      <svg id="simSpark" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simulated price path"></svg>
+      <div class="grid-wrap">
+        <table class="grid" id="simTable"></table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="isTitle">
+      <div class="panel-head">
+        <h2 id="isTitle">Is allocation</h2>
+        <p>What actually happened that month, next to the simulation and the desired pace. Empty means not recorded.</p>
+      </div>
+      <div class="grid-wrap">
+        <table class="grid" id="isTable"></table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Data stays in this tab (<code>sessionStorage</code>). No server, no cookies.</p>
+    <button type="button" id="resetAll" class="ghost">Clear session</button>
+  </footer>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+  <script src="app.js?v=12"></script>
+</body>
+</html>
