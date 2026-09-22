@@ -17,6 +17,14 @@
   --btc: #f7931a;
   --realestate: #7eb6ff;
   --other: #c4a6ff;
+  --rent: #9a9a9a;
+  --css: #5c7a8a;
+  --sports: #6a8a6a;
+  --transport: #8a735c;
+  --kita: #8a6a7a;
+  --digital: #5c6a8a;
+  --spend: #8a7a5c;
+  --homekid: #6a7a6a;
   --income: #ffffff;
 }
 
@@ -210,6 +218,15 @@ main, footer {
 .row.root .name { font-weight: 600; }
 .row.nest { padding-left: 18px; }
 .row.nest-2 { padding-left: 36px; }
+.living-bar {
+  display: flex;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0 2px 0;
+  background: var(--line);
+}
+.living-bar i { display: block; min-width: 0; height: 100%; }
 .row .name { color: var(--fg); min-width: 0; }
 .row.muted-name .name { color: var(--muted); }
 .row .vals {

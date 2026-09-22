@@ -9,6 +9,28 @@
     realestate: { label: "Real estate", color: "var(--realestate)" },
     other: { label: "Other assets", color: "var(--other)" },
   };
+  /* Shares of the living slice (4663 CHF = 100% of living). Do not touch livingPct. */
+  const LIVING_KEYS = ["rent", "css", "sports", "transport", "kita", "digital", "spend", "home"];
+  const LIVING_META = {
+    rent: { label: "Rent", color: "var(--rent)" },
+    css: { label: "CSS", color: "var(--css)" },
+    sports: { label: "Sports", color: "var(--sports)" },
+    transport: { label: "Transport", color: "var(--transport)" },
+    kita: { label: "Kita", color: "var(--kita)" },
+    digital: { label: "Digital services", color: "var(--digital)" },
+    spend: { label: "Spend allowance", color: "var(--spend)" },
+    home: { label: "Home and kid", color: "var(--homekid)" },
+  };
+  const DEFAULT_LIVING_MIX = () => ({
+    rent: 1650 / 4663 * 100,
+    css: 560 / 4663 * 100,
+    sports: 110 / 4663 * 100,
+    transport: 50 / 4663 * 100,
+    kita: 1293 / 4663 * 100,
+    digital: 100 / 4663 * 100,
+    spend: 600 / 4663 * 100,
+    home: 300 / 4663 * 100,
+  });
   const POTS = [
     { id: "backup", label: "Backup fund", color: "var(--backup)" },
     { id: "family", label: "Family fund", color: "var(--family)" },
@@ -24,6 +46,7 @@
     livingPct: 55.75,
     backupOfSavedPct: 11.43089027,
     familyOfSavedPct: 5.715445133,
+    livingMix: DEFAULT_LIVING_MIX(),
     mix: { taxes: 0, cash: 0, btc: 50, realestate: 25, other: 25 },
   });
 
@@ -112,7 +135,12 @@
     const d = DEFAULT_MONTH();
     if (!m) return d;
     if (m.familyOfSavedPct == null) return { ...d, income: m.income ?? d.income };
-    return { ...d, ...m, mix: { ...d.mix, ...(m.mix || {}) } };
+    return {
+      ...d,
+      ...m,
+      mix: { ...d.mix, ...(m.mix || {}) },
+      livingMix: { ...d.livingMix, ...(m.livingMix || {}) },
+    };
   }
 
   function parseAmount(raw) {
@@ -218,10 +246,24 @@
     });
     const unallocOfInvest = Math.max(0, 100 - mixSum);
     const unallocPct = investPct * unallocOfInvest / 100;
+    const livingMix = m.livingMix || DEFAULT_LIVING_MIX();
+    const livingMixSum = LIVING_KEYS.reduce((s, k) => s + (livingMix[k] || 0), 0);
+    const livingSlices = LIVING_KEYS.map((k) => {
+      const ofLiving = livingMix[k] || 0;
+      const ofIncome = livingPct * ofLiving / 100;
+      return { id: k, ofLiving, ofIncome, chf: income * ofIncome / 100 };
+    });
+    const unallocOfLiving = Math.max(0, 100 - livingMixSum);
+    const unallocLivingPct = livingPct * unallocOfLiving / 100;
     return {
       income,
       livingPct,
       livingChf: income * livingPct / 100,
+      livingMixSum,
+      livingSlices,
+      unallocOfLiving,
+      unallocLivingPct,
+      unallocLivingChf: income * unallocLivingPct / 100,
       savedPct,
       savedChf: income * savedPct / 100,
       backupOfSaved,
@@ -264,6 +306,7 @@
       livingPct: m.livingPct,
       backupOfSavedPct: m.backupOfSavedPct,
       familyOfSavedPct: m.familyOfSavedPct,
+      livingMix: { ...m.livingMix },
       mix: { ...m.mix },
     };
   }
@@ -329,8 +372,22 @@
     const rows = [];
     rows.push(row("root", `<span class="dot" style="background:var(--income)"></span>100%`,
       `<span>Net income</span>${chfInput(c.income, "income")}`));
-    rows.push(row("", `<span class="dot" style="background:var(--living)"></span>Living + family + rent + health + food + services`,
+    rows.push(row("", `<span class="dot" style="background:var(--living)"></span>Living`,
       `${pctInput(c.livingPct, "livingPct")}<span>of income</span>${chfInput(c.livingChf, "living")}`));
+    const livingBar = c.livingSlices.map((s) =>
+      `<i style="flex:${Math.max(s.ofLiving, 0)};background:${LIVING_META[s.id].color}" title="${LIVING_META[s.id].label}"></i>`
+    ).join("") + (c.unallocOfLiving > 0.009
+      ? `<i style="flex:${c.unallocOfLiving};background:#2a2a2a" title="Unallocated"></i>` : "");
+    rows.push(`<div class="living-bar" aria-hidden="true">${livingBar}</div>`);
+    for (const s of c.livingSlices) {
+      const meta = LIVING_META[s.id];
+      rows.push(row("nest", `<span class="dot" style="background:${meta.color}"></span>${meta.label}`,
+        `${pctInput(s.ofLiving, "livingMix." + s.id)}<span>of living = ${fmtPct(s.ofIncome)}% of income</span>${plainChfInput(s.chf, "livingMixChf." + s.id)}`));
+    }
+    if (c.unallocOfLiving > 0.009) {
+      rows.push(row("nest muted-name", `Unallocated living`,
+        `<span>${fmtPct(c.unallocOfLiving)}% of living = ${fmtPct(c.unallocLivingPct)}% of income</span><span>${fmtK(c.unallocLivingChf)}</span>`));
+    }
     rows.push(row("", `<span class="dot" style="background:var(--saved)"></span>Saved`,
       `${pctInput(c.savedPct, "savedPct")}<span>of income</span><span>${fmtK(c.savedChf)}</span>`));
     rows.push(row("nest", `<span class="dot" style="background:var(--backup)"></span>Backup fund`,
@@ -357,6 +414,9 @@
     if (c.fundsOfSaved + c.investOfSaved > 100.05) {
       warn.hidden = false;
       warn.textContent = `Backup + family take ${fmtPct(c.fundsOfSaved)}% of savings (over 100%).`;
+    } else if (c.livingMixSum > 100.009) {
+      warn.hidden = false;
+      warn.textContent = `Living mix adds up to ${fmtPct(c.livingMixSum)}% (over 100%). Shrink a slice.`;
     } else if (c.mixSum > 100.009) {
       warn.hidden = false;
       warn.textContent = `Investment mix adds up to ${fmtPct(c.mixSum)}% (over 100%). Shrink a slice.`;
@@ -637,17 +697,31 @@
       { id: "income", col: 0, value: c.income, label: "Net income", color: "#f5f5f5" },
       { id: "living", col: 1, value: c.livingChf, label: "Living", color: "#6b6b6b" },
       { id: "saved", col: 1, value: c.savedChf, label: "Saved", color: "#d4d4d4" },
-      { id: "backup", col: 2, value: c.backupChf, label: "Backup", color: "#e8c547" },
-      { id: "family", col: 2, value: c.familyChf, label: "Family", color: "#c4a24a" },
-      { id: "invest", col: 2, value: c.investChf, label: "Investments", color: "#ececec" },
     ];
     const links = [
       { from: "income", to: "living", value: c.livingChf, color: "#6b6b6b" },
       { from: "income", to: "saved", value: c.savedChf, color: "#d4d4d4" },
+    ];
+    for (const s of c.livingSlices) {
+      if (s.chf <= 0) continue;
+      const meta = LIVING_META[s.id];
+      nodes.push({ id: "liv-" + s.id, col: 2, value: s.chf, label: meta.label, color: cssColor(meta.color) });
+      links.push({ from: "living", to: "liv-" + s.id, value: s.chf, color: cssColor(meta.color) });
+    }
+    if (c.unallocLivingChf > 0.5) {
+      nodes.push({ id: "liv-unalloc", col: 2, value: c.unallocLivingChf, label: "Unallocated", color: "#3a3a3a" });
+      links.push({ from: "living", to: "liv-unalloc", value: c.unallocLivingChf, color: "#3a3a3a" });
+    }
+    nodes.push(
+      { id: "backup", col: 2, value: c.backupChf, label: "Backup", color: "#e8c547" },
+      { id: "family", col: 2, value: c.familyChf, label: "Family", color: "#c4a24a" },
+      { id: "invest", col: 2, value: c.investChf, label: "Investments", color: "#ececec" },
+    );
+    links.push(
       { from: "saved", to: "backup", value: c.backupChf, color: "#e8c547" },
       { from: "saved", to: "family", value: c.familyChf, color: "#c4a24a" },
       { from: "saved", to: "invest", value: c.investChf, color: "#ececec" },
-    ];
+    );
     for (const s of c.slices) {
       if (s.chf <= 0) continue;
       const meta = MIX_META[s.id];
@@ -658,7 +732,7 @@
       nodes.push({ id: "unalloc", col: 3, value: c.unallocChf, label: "Unallocated", color: "#3a3a3a" });
       links.push({ from: "invest", to: "unalloc", value: c.unallocChf, color: "#3a3a3a" });
     }
-    drawSankey($("sankey"), nodes, links, c.income, { height: 340, shareLabel: "of income" });
+    drawSankey($("sankey"), nodes, links, c.income, { height: 520, shareLabel: "of income" });
   }
 
   function cssColor(v) {
@@ -670,6 +744,14 @@
       "var(--other)": "#c4a6ff",
       "var(--backup)": "#e8c547",
       "var(--family)": "#c4a24a",
+      "var(--rent)": "#9a9a9a",
+      "var(--css)": "#5c7a8a",
+      "var(--sports)": "#6a8a6a",
+      "var(--transport)": "#8a735c",
+      "var(--kita)": "#8a6a7a",
+      "var(--digital)": "#5c6a8a",
+      "var(--spend)": "#8a7a5c",
+      "var(--homekid)": "#6a7a6a",
     };
     return map[v] || v;
   }
@@ -771,17 +853,18 @@
       g.append(ns("rect", { x: L.x, y: L.y, width: nodeW, height: L.h, rx: "2", fill: n.color }));
       const right = n.col === cols;
       const left = n.col === 0;
+      const mid = !left && !right && L.h >= 11;
       const text = ns("text", {
         x: right || !left ? L.x + nodeW + 8 : L.x - 8,
         y: L.y + Math.min(L.h / 2, 9) + 4,
         fill: "#c8c8c8",
-        "font-size": "11",
+        "font-size": mid ? "10" : "11",
         "font-family": "ui-sans-serif, system-ui, sans-serif",
         "text-anchor": left ? "end" : "start",
       });
       const pct = total > 0 ? (n.value / total) * 100 : 0;
-      if (left || right) {
-        text.textContent = `${n.label} ${fmtPct(pct)}%`;
+      if (left || right || mid) {
+        text.textContent = mid ? n.label : `${n.label} ${fmtPct(pct)}%`;
         g.append(text);
       }
       g.addEventListener("pointerenter", (e) => showTip(e, `${n.label}\n${fmtPct(pct)}% ${shareLabel}\n${fmtChf(n.value)}`));
@@ -815,6 +898,10 @@
     else if (field === "savedPct") m.livingPct = clamp(100 - pct, 0, 100);
     else if (field === "backupOfSavedPct") m.backupOfSavedPct = Math.max(0, pct);
     else if (field === "familyOfSavedPct") m.familyOfSavedPct = Math.max(0, pct);
+    else if (field.startsWith("livingMix.")) {
+      if (!m.livingMix) m.livingMix = DEFAULT_LIVING_MIX();
+      m.livingMix[field.slice(10)] = Math.max(0, pct);
+    }
     else if (field.startsWith("mix.")) m.mix[field.slice(4)] = Math.max(0, pct);
   }
 
@@ -825,7 +912,11 @@
     else if (field === "living" && c.income) m.livingPct = clamp(chf / c.income * 100, 0, 100);
     else if (field === "backup" && c.savedChf) m.backupOfSavedPct = Math.max(0, chf / c.savedChf * 100);
     else if (field === "family" && c.savedChf) m.familyOfSavedPct = Math.max(0, chf / c.savedChf * 100);
-    else if (field.startsWith("mixChf.")) {
+    else if (field.startsWith("livingMixChf.")) {
+      const id = field.slice(13);
+      if (!m.livingMix) m.livingMix = DEFAULT_LIVING_MIX();
+      if (c.livingChf) m.livingMix[id] = Math.max(0, chf / c.livingChf * 100);
+    } else if (field.startsWith("mixChf.")) {
       const id = field.slice(7);
       if (c.investChf) m.mix[id] = Math.max(0, chf / c.investChf * 100);
     }
@@ -986,6 +1077,7 @@
     const lines = [
       `Allok  ${state.month}  net income ${fmtChf(c.income)}`,
       `Living ${fmtPct(c.livingPct)}%  ${fmtChf(c.livingChf)}`,
+      ...c.livingSlices.map((s) => `  ${LIVING_META[s.id].label} ${fmtPct(s.ofLiving)}% of living = ${fmtChf(s.chf)}`),
       `Saved ${fmtPct(c.savedPct)}%  ${fmtChf(c.savedChf)}`,
       `  Backup fund ${fmtPct(c.backupOfSaved)}% of savings = ${fmtChf(c.backupChf)}`,
       `  Family fund ${fmtPct(c.familyOfSaved)}% of savings = ${fmtChf(c.familyChf)}`,
