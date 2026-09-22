@@ -821,6 +821,22 @@
       }
     }
 
+    const last = byCol[cols] || [];
+    const lastSum = last.reduce((s, n) => s + n.value, 0);
+    if (cols >= 2 && last.length >= 2 && lastSum < total * 0.85) {
+      const top = padT;
+      const bot = layout[byCol[0][0].id] ? layout[byCol[0][0].id].y + layout[byCol[0][0].id].h : padT + innerH;
+      const laid = last.map((n) => layout[n.id]);
+      const sumH = laid.reduce((s, n) => s + n.h, 0);
+      const leftover = Math.max(0, bot - top - sumH);
+      const g = leftover / (laid.length + 1);
+      let y = top + g;
+      for (const n of laid) {
+        n.y = y;
+        y += n.h + g;
+      }
+    }
+
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.replaceChildren();
@@ -850,7 +866,7 @@
       outOff[a.id] += ah;
       inOff[b.id] += bh;
       const x0 = a.x + nodeW, x1 = b.x;
-      const c = (x1 - x0) * 0.46;
+      const c = (x1 - x0) * 0.55;
       const d = `M${x0},${y0} C${x0 + c},${y0} ${x1 - c},${y1} ${x1},${y1} L${x1},${y1 + bh} C${x1 - c},${y1 + bh} ${x0 + c},${y0 + ah} ${x0},${y0 + ah} Z`;
       const path = ns("path", { d, fill: `url(#lg${i})`, "data-tip": `${link.from} → ${nodes.find((n) => n.id === link.to)?.label || link.to}` });
       const pct = total > 0 ? (link.value / total) * 100 : 0;
