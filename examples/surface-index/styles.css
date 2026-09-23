@@ -1,0 +1,391 @@
+/* Satoshi by Indian Type Foundry, Fontshare — free for commercial use.
+   Open stand-in for Aeonik Soft. */
+
+@font-face {
+  font-family: Satoshi;
+  src: url("fonts/satoshi-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Satoshi;
+  src: url("fonts/satoshi-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Satoshi;
+  src: url("fonts/satoshi-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Satoshi;
+  src: url("fonts/satoshi-900.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --ink: #fff;
+  --mute: rgba(255, 255, 255, 0.62);
+  --faint: rgba(255, 255, 255, 0.38);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #000;
+  color: var(--ink);
+  font-family: Satoshi, "Avenir Next", "Century Gothic", Futura, sans-serif;
+  font-weight: 500;
+  text-rendering: geometricPrecision;
+}
+
+body {
+  min-height: 100svh;
+}
+
+::selection {
+  background: #fff;
+  color: #000;
+}
+
+button,
+input,
+label {
+  font: inherit;
+}
+
+button {
+  background: none;
+  border: 0;
+  color: var(--mute);
+  cursor: pointer;
+  padding: 6px 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+button:hover,
+button:focus-visible {
+  color: #fff;
+}
+
+button:focus-visible,
+[contenteditable]:focus-visible {
+  outline: 1px solid #fff;
+  outline-offset: 3px;
+}
+
+button[aria-pressed="true"] {
+  color: #fff;
+}
+
+.bar {
+  position: fixed;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 0;
+  pointer-events: none;
+}
+
+.bar button,
+.brand {
+  pointer-events: auto;
+}
+
+.brand {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+}
+
+.bar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.stage {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 2.4vh, 36px);
+  padding: 68px 6vw 96px;
+  box-sizing: border-box;
+}
+
+.map-slot {
+  width: min(820px, 78vw);
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.map-fit {
+  position: relative;
+  line-height: 0;
+}
+
+#sheet {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#ink {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.drop {
+  text-align: center;
+  padding: 8vh 0;
+}
+
+.drop p {
+  margin: 0 0 8px;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.drop span {
+  color: var(--mute);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+body.has-map .drop {
+  display: none;
+}
+
+body.drag .drop,
+body.drag .map-slot::after {
+  content: none;
+}
+
+body.drag .map-slot {
+  outline: 1px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 12px;
+}
+
+.copy {
+  width: max-content;
+  max-width: min(92vw, 42rem);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(16px, 2.6vh, 40px);
+}
+
+.statement,
+.prompt {
+  margin: 0;
+  font-weight: 500;
+  letter-spacing: -0.038em;
+  line-height: 0.98;
+  white-space: pre-line;
+  max-width: 11em;
+}
+
+.statement {
+  font-size: clamp(1.85rem, 3.4vw, 3rem);
+}
+
+.prompt {
+  font-size: clamp(1.5rem, 2.8vw, 2.45rem);
+  font-weight: 500;
+}
+
+.statement:focus,
+.prompt:focus {
+  outline: none;
+  box-shadow: inset 2px 0 0 #fff;
+}
+
+.figure {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: clamp(6rem, min(14vw, 22vh), 12.5rem);
+  line-height: 0.76;
+  letter-spacing: -0.06em;
+  text-transform: none;
+  text-align: left;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.figure:focus-visible {
+  outline-offset: 8px;
+}
+
+.loupe {
+  position: fixed;
+  z-index: 6;
+  width: 88px;
+  pointer-events: none;
+  border: 1px solid #fff;
+  background: #000;
+}
+
+.loupe canvas {
+  display: block;
+  width: 88px;
+  height: 88px;
+  image-rendering: pixelated;
+}
+
+.loupe span {
+  display: block;
+  padding: 4px 0 5px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.dock {
+  position: fixed;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px 12px;
+  background: linear-gradient(to top, #000 70%, rgba(0, 0, 0, 0));
+}
+
+.dock-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 0;
+}
+
+.swatches {
+  display: flex;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid #fff;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mute);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0 8px;
+}
+
+.slider input[type="range"] {
+  width: 96px;
+  accent-color: #fff;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mute);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0 8px;
+}
+
+.meta {
+  margin: 2px 8px 0;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+body.sample #ink {
+  cursor: crosshair;
+}
+
+@media (max-width: 720px) {
+  .map-slot {
+    width: min(92vw, 520px);
+  }
+
+  .statement {
+    font-size: clamp(1.65rem, 7.4vw, 2.15rem);
+  }
+
+  .prompt {
+    font-size: clamp(1.35rem, 6vw, 1.8rem);
+  }
+
+  .figure {
+    font-size: clamp(5rem, 26vw, 7.25rem);
+  }
+
+  .copy {
+    gap: 28px;
+  }
+
+  .stage {
+    gap: 28px;
+    padding-top: 12vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-fit {
+    transition: none;
+  }
+}
