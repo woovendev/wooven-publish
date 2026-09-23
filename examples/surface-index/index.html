@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Flächenanteil auf einer maskierten Karte. Die Zählung läuft im Browser, die schwarze Maske bleibt aussen vor."
+    />
+    <title>PLOT — Flächenanteil</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000'/%3E%3Crect x='3' y='3' width='10' height='10' fill='none' stroke='%23fff'/%3E%3C/svg%3E" />
+    <link rel="preload" href="fonts/satoshi-500.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/satoshi-900.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      try {
+        if (localStorage.getItem("plot-theme") === "light") document.documentElement.classList.add("light");
+      } catch (e) {}
+    </script>
+    <link rel="stylesheet" href="styles.css?v=8" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="bar-start">
+        <button type="button" class="theme" id="theme" aria-pressed="false" aria-label="Helles Layout">
+          <svg class="icon-sun" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="2.3" fill="none" stroke="currentColor" stroke-width="1.3" />
+            <path d="M8 1.1v1.7M8 13.2v1.7M1.1 8h1.7M13.2 8h1.7M3.1 3.1l1.2 1.2M11.7 11.7l1.2 1.2M3.1 12.9l1.2-1.2M11.7 4.3l1.2-1.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M9.4 1.7a5.2 5.2 0 1 0 4.8 7.2A4.5 4.5 0 0 1 9.4 1.7z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <div class="brand">PLOT</div>
+      </div>
+      <div class="bar-actions">
+        <button type="button" id="open">Datei</button>
+        <button type="button" id="specimen">Screenshot</button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <div class="map-slot" id="slot">
+        <div class="map-fit" id="fit" hidden>
+          <canvas id="sheet" aria-label="Kartenausschnitt"></canvas>
+          <canvas id="ink" aria-hidden="true"></canvas>
+        </div>
+        <figure class="proof" id="proofWrap" hidden>
+          <figcaption id="proofCap">100 Zellen</figcaption>
+          <canvas id="proof" width="400" height="400" aria-label="Zehn mal zehn der sichtbaren Fläche"></canvas>
+          <button type="button" class="parity" id="parity" aria-pressed="false" aria-label="Matrix auf die Fläche der Karte">
+            <svg viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M1 4.2V1h3.2M11 4.2V1H7.8M1 7.8V11h3.2M11 7.8V11H7.8" fill="none" stroke="currentColor" stroke-width="1.2" />
+            </svg>
+            1:1
+          </button>
+        </figure>
+        <div class="drop" id="drop">
+          <p>Karte ablegen</p>
+          <span>PNG, JPG · Berechnung im Browser</span>
+        </div>
+      </div>
+
+      <div class="copy">
+        <div class="statement" id="statement" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Aussage">Anteil an
+Betonierte
+Fläche in
+Screenshot</div>
+        <p class="prompt" id="prompt" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Frage">Einschätzung nach Auge?</p>
+        <button type="button" class="figure" id="figure" aria-live="polite" data-settled="false">—</button>
+      </div>
+    </main>
+
+    <div class="loupe" id="loupe" hidden>
+      <canvas id="loupeCanvas" width="88" height="88"></canvas>
+      <span id="loupeHex"></span>
+    </div>
+
+    <footer class="dock">
+      <div class="dock-row">
+        <button type="button" id="presetPaved" aria-pressed="true">Beton</button>
+        <button type="button" id="presetGreen" aria-pressed="false">Grün</button>
+        <button type="button" id="modeSample" aria-pressed="false">Farbe</button>
+        <button type="button" id="modeMask" aria-pressed="false">Maske</button>
+        <button type="button" id="layer" aria-pressed="true">Lage</button>
+        <button type="button" id="polarity" aria-pressed="true">Rot = viel</button>
+        <div class="swatches" id="swatches"></div>
+        <label class="slider" id="hueLabel" hidden>Fenster <input id="hue" type="range" min="4" max="64" value="22" /></label>
+        <button type="button" id="black" aria-pressed="true">Schwarzmaske</button>
+      </div>
+      <div class="dock-row" id="maskRow" hidden>
+        <button type="button" data-tool="brush" aria-pressed="true">Pinsel</button>
+        <button type="button" data-tool="erase" aria-pressed="false">Radierer</button>
+        <button type="button" data-tool="rect" aria-pressed="false">Rechteck</button>
+        <button type="button" data-tool="poly" aria-pressed="false">Polygon</button>
+        <label class="slider">Grösse <input id="brush" type="range" min="8" max="96" value="28" /></label>
+        <button type="button" id="undo">Zurück</button>
+        <button type="button" id="clearMask">Leeren</button>
+        <span class="mask-note" id="maskNote">Schraffur zählt nicht</span>
+      </div>
+      <p class="meta" id="meta">Karte ablegen. Schwarz maskierte Pixel zählen nicht zur sichtbaren Fläche.</p>
+    </footer>
+
+    <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+    <script type="module" src="app.js?v=9"></script>
+  </body>
+</html>
