@@ -162,8 +162,10 @@ function renderFigure(value, settled) {
   const u = signalU(value);
   const hue = 140 * (1 - u);
   const color = `hsl(${hue} 100% 50%)`;
+  const glow = document.documentElement.classList.contains("light") ? 0.2 : 1;
+  const a = (n) => (n * glow).toFixed(3);
   figure.style.color = color;
-  figure.style.textShadow = `0 0 10px hsl(${hue} 100% 50%), 0 0 28px hsl(${hue} 100% 50% / 0.95), 0 0 56px hsl(${hue} 100% 50% / 0.7), 0 0 100px hsl(${hue} 100% 50% / 0.4)`;
+  figure.style.textShadow = `0 0 10px hsl(${hue} 100% 50% / ${a(1)}), 0 0 28px hsl(${hue} 100% 50% / ${a(0.95)}), 0 0 56px hsl(${hue} 100% 50% / ${a(0.7)}), 0 0 100px hsl(${hue} 100% 50% / ${a(0.4)})`;
   figure.dataset.pct = value.toFixed(2);
   figure.dataset.settled = settled ? "true" : "false";
   if (settled) document.title = `${shown}% — PLOT`;
@@ -851,6 +853,7 @@ function applyTheme(light) {
   try {
     localStorage.setItem("plot-theme", light ? "light" : "dark");
   } catch (e) {}
+  if (figure.dataset.pct) renderFigure(Number(figure.dataset.pct), figure.dataset.settled === "true");
 }
 
 $("theme").addEventListener("click", () => {
