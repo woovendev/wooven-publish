@@ -144,6 +144,9 @@ export function survey(pixels, width, height, mask, opt) {
   let excludedBlack = 0;
   let excludedPaint = 0;
   let blackPixels = 0;
+  let sumR = 0;
+  let sumG = 0;
+  let sumB = 0;
   const hatchStep = opt.hatchStep || 32;
   // Reused so the census does not allocate a colour object per pixel.
   const hsl = { h: 0, s: 0, l: 0 };
@@ -168,7 +171,12 @@ export function survey(pixels, width, height, mask, opt) {
         if (!countOnly) {
           writeHsl(r, g, b, hsl);
           match = isTracked(type, hsl.h, hsl.s, hsl.l, samples, hueWindow, minSat, lightWindow);
-          if (match) tracked++;
+          if (match) {
+            tracked++;
+            sumR += r;
+            sumG += g;
+            sumB += b;
+          }
         }
       } else if (painted) {
         excludedPaint++;
@@ -214,5 +222,8 @@ export function survey(pixels, width, height, mask, opt) {
     blackPixels,
     total: width * height,
     pct,
+    mean: tracked
+      ? [(sumR / tracked) | 0, (sumG / tracked) | 0, (sumB / tracked) | 0]
+      : null,
   };
 }

@@ -37,7 +37,7 @@ const state = {
   polarity: "strain",
   hueWindow: 22,
   excludeBlack: true,
-  showLayer: false,
+  showLayer: true,
   tool: "brush",
   brush: 28,
   place: "Zürich Kreis 5",
@@ -228,15 +228,28 @@ function layoutMap() {
   const chrome = 68 + (dock?.offsetHeight || 88) + gap;
   const availH = Math.max(120, window.innerHeight - chrome - (copy?.offsetHeight || 280) - gap);
   const maxH = Math.min(availH, window.innerHeight * 0.36);
-  const maxW = Math.min(640, window.innerWidth * 0.5);
-  const scale = Math.min(maxW / state.view.w, maxH / state.view.h);
+  const narrow = window.innerWidth < 760;
+  $("slot").classList.toggle("stack-proof", narrow);
+  const gutter = 20;
+  const captionH = 22;
+  const edge = 32;
+  let scale = Math.min(Math.min(640, window.innerWidth * 0.46) / state.view.w, maxH / state.view.h);
+  if (!narrow) {
+    const room = window.innerWidth / 2 - edge - gutter + captionH;
+    const fitScale = room / (state.view.w / 2 + state.view.h);
+    if (fitScale < scale) scale = fitScale;
+  } else {
+    scale = Math.min((window.innerWidth * 0.86) / state.view.w, maxH / state.view.h);
+  }
+  const fittedW = Math.max(1, Math.round(state.view.w * scale));
   const fittedH = Math.max(1, Math.round(state.view.h * scale));
-  fit.style.width = `${Math.max(1, Math.round(state.view.w * scale))}px`;
+  fit.style.width = `${fittedW}px`;
   fit.style.height = `${fittedH}px`;
   const proof = $("proof");
   if (proof) {
-    proof.style.width = `${fittedH}px`;
-    proof.style.height = `${fittedH}px`;
+    const col = Math.max(96, fittedH - captionH);
+    proof.style.width = `${col}px`;
+    proof.style.height = `${col}px`;
   }
   const { view } = state;
   sheet.dataset.vx = String(view.x);
@@ -290,16 +303,19 @@ function drawProof(result) {
   ctx.clearRect(0, 0, size, size);
   const cell = (size - gap * (n + 1)) / n;
   const greenCells = (result.tracked / result.visible) * 100;
+  const fillColor = result.mean
+    ? `rgb(${result.mean[0]},${result.mean[1]},${result.mean[2]})`
+    : "#c8f5d4";
   for (let i = 0; i < 100; i++) {
     const gx = i % n;
     const gy = Math.floor(i / n);
     const x = gap + gx * (cell + gap);
     const y = gap + gy * (cell + gap);
     const fill = Math.min(1, Math.max(0, greenCells - i));
-    ctx.fillStyle = "#2a2a2a";
+    ctx.fillStyle = "#3a3a3a";
     ctx.fillRect(x, y, cell, cell);
     if (fill > 0) {
-      ctx.fillStyle = "#c8f5d4";
+      ctx.fillStyle = fillColor;
       ctx.fillRect(x, y + cell * (1 - fill), cell, cell * fill);
     }
   }
