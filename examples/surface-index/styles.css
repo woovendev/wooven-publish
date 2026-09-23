@@ -37,7 +37,26 @@
   color-scheme: dark;
   --ink: #fff;
   --mute: rgba(255, 255, 255, 0.62);
+  --soft: rgba(255, 255, 255, 0.72);
   --faint: rgba(255, 255, 255, 0.38);
+  --ground: #000;
+  --line: rgba(255, 255, 255, 0.55);
+  --track: #fff;
+  --thumb: #000;
+  --dock: linear-gradient(to top, #000 70%, rgba(0, 0, 0, 0));
+}
+
+html.light {
+  color-scheme: light;
+  --ink: #000;
+  --mute: rgba(0, 0, 0, 0.62);
+  --soft: rgba(0, 0, 0, 0.72);
+  --faint: rgba(0, 0, 0, 0.42);
+  --ground: #fff;
+  --line: rgba(0, 0, 0, 0.55);
+  --track: #000;
+  --thumb: #fff;
+  --dock: linear-gradient(to top, #fff 70%, rgba(255, 255, 255, 0));
 }
 
 * {
@@ -48,7 +67,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #000;
+  background: var(--ground);
   color: var(--ink);
   font-family: Satoshi, "Avenir Next", "Century Gothic", Futura, sans-serif;
   font-weight: 500;
@@ -60,8 +79,8 @@ body {
 }
 
 ::selection {
-  background: #fff;
-  color: #000;
+  background: var(--ink);
+  color: var(--ground);
 }
 
 button,
@@ -84,17 +103,17 @@ button {
 
 button:hover,
 button:focus-visible {
-  color: #fff;
+  color: var(--ink);
 }
 
 button:focus-visible,
 [contenteditable]:focus-visible {
-  outline: 1px solid #fff;
+  outline: 1px solid var(--ink);
   outline-offset: 3px;
 }
 
 button[aria-pressed="true"] {
-  color: #fff;
+  color: var(--ink);
 }
 
 .bar {
@@ -108,6 +127,41 @@ button[aria-pressed="true"] {
   justify-content: space-between;
   padding: 16px 18px 0;
   pointer-events: none;
+}
+
+.bar-start {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  pointer-events: auto;
+}
+
+.theme {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.theme svg {
+  width: 15px;
+  height: 15px;
+}
+
+.theme .icon-moon {
+  display: none;
+}
+
+html.light .theme .icon-sun {
+  display: none;
+}
+
+html.light .theme .icon-moon {
+  display: block;
 }
 
 .bar button,
@@ -167,7 +221,7 @@ button[aria-pressed="true"] {
   width: 180px;
   height: 180px;
   background: #141414;
-  outline: 1px solid rgba(255, 255, 255, 0.55);
+  outline: 1px solid var(--line);
 }
 
 .parity {
@@ -178,7 +232,7 @@ button[aria-pressed="true"] {
   gap: 6px;
   margin: 0;
   padding: 2px 0 0;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--mute);
   letter-spacing: 0.16em;
 }
 
@@ -189,7 +243,7 @@ button[aria-pressed="true"] {
 }
 
 .parity[aria-pressed="true"] {
-  color: #fff;
+  color: var(--ink);
 }
 
 body.laid-out .map-slot,
@@ -204,7 +258,7 @@ body.laid-out .proof canvas {
 
 .proof figcaption {
   margin: 0;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--soft);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -268,7 +322,7 @@ body.drag .map-slot::after {
 }
 
 body.drag .map-slot {
-  outline: 1px solid rgba(255, 255, 255, 0.4);
+  outline: 1px solid var(--line);
   outline-offset: 12px;
 }
 
@@ -303,7 +357,7 @@ body.drag .map-slot {
 .statement:focus,
 .prompt:focus {
   outline: none;
-  box-shadow: inset 2px 0 0 #fff;
+  box-shadow: inset 2px 0 0 var(--ink);
 }
 
 .figure {
@@ -312,7 +366,7 @@ body.drag .map-slot {
   padding: 0;
   border: 0;
   background: none;
-  color: #fff;
+  color: var(--ink);
   font-family: inherit;
   font-weight: 900;
   font-size: clamp(6rem, min(14vw, 22vh), 12.5rem);
@@ -334,8 +388,8 @@ body.drag .map-slot {
   z-index: 6;
   width: 88px;
   pointer-events: none;
-  border: 1px solid #fff;
-  background: #000;
+  border: 1px solid var(--ink);
+  background: var(--ground);
 }
 
 .loupe canvas {
@@ -364,7 +418,7 @@ body.drag .map-slot {
   flex-direction: column;
   gap: 2px;
   padding: 8px 14px 12px;
-  background: linear-gradient(to top, #000 70%, rgba(0, 0, 0, 0));
+  background: var(--dock);
 }
 
 .dock-row {
@@ -384,7 +438,7 @@ body.drag .map-slot {
   width: 16px;
   height: 16px;
   padding: 0;
-  border: 1px solid #fff;
+  border: 1px solid var(--ink);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -413,7 +467,7 @@ body.drag .map-slot {
 
 .slider input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: #fff;
+  background: var(--track);
 }
 
 .slider input[type="range"]::-webkit-slider-thumb {
@@ -421,27 +475,27 @@ body.drag .map-slot {
   width: 16px;
   height: 16px;
   margin-top: -6px;
-  background: #000;
-  border: 2px solid #fff;
+  background: var(--thumb);
+  border: 2px solid var(--track);
   border-radius: 50%;
 }
 
 .slider input[type="range"]::-moz-range-track {
   height: 4px;
-  background: #fff;
+  background: var(--track);
   border: 0;
 }
 
 .slider input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: #000;
-  border: 2px solid #fff;
+  background: var(--thumb);
+  border: 2px solid var(--track);
   border-radius: 50%;
 }
 
 .mask-note {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--soft);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;

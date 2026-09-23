@@ -11,11 +11,27 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000'/%3E%3Crect x='3' y='3' width='10' height='10' fill='none' stroke='%23fff'/%3E%3C/svg%3E" />
     <link rel="preload" href="fonts/satoshi-500.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/satoshi-900.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <script>
+      try {
+        if (localStorage.getItem("plot-theme") === "light") document.documentElement.classList.add("light");
+      } catch (e) {}
+    </script>
+    <link rel="stylesheet" href="styles.css?v=7" />
   </head>
   <body>
     <header class="bar">
-      <div class="brand">PLOT</div>
+      <div class="bar-start">
+        <button type="button" class="theme" id="theme" aria-pressed="false" aria-label="Helles Layout">
+          <svg class="icon-sun" viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="8" cy="8" r="2.3" fill="none" stroke="currentColor" stroke-width="1.3" />
+            <path d="M8 1.1v1.7M8 13.2v1.7M1.1 8h1.7M13.2 8h1.7M3.1 3.1l1.2 1.2M11.7 11.7l1.2 1.2M3.1 12.9l1.2-1.2M11.7 4.3l1.2-1.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M9.4 1.7a5.2 5.2 0 1 0 4.8 7.2A4.5 4.5 0 0 1 9.4 1.7z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <div class="brand">PLOT</div>
+      </div>
       <div class="bar-actions">
         <button type="button" id="open">Datei</button>
         <button type="button" id="specimen">Kreis 5</button>
@@ -85,6 +101,6 @@ Zürich Kreis 5</div>
     </footer>
 
     <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
-    <script type="module" src="app.js?v=6"></script>
+    <script type="module" src="app.js?v=7"></script>
   </body>
 </html>

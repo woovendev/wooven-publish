@@ -150,7 +150,7 @@ function signalU(pct) {
 function renderFigure(value, settled) {
   if (value == null || Number.isNaN(value)) {
     figure.textContent = "—";
-    figure.style.color = "#fff";
+    figure.style.color = "";
     figure.style.textShadow = "none";
     figure.dataset.pct = "";
     figure.dataset.settled = "false";
@@ -842,6 +842,21 @@ $("parity").addEventListener("click", () => {
   $("parity").setAttribute("aria-pressed", state.parity ? "true" : "false");
   layoutMap();
 });
+
+function applyTheme(light) {
+  document.documentElement.classList.toggle("light", light);
+  const btn = $("theme");
+  btn.setAttribute("aria-pressed", light ? "true" : "false");
+  btn.setAttribute("aria-label", light ? "Dunkles Layout" : "Helles Layout");
+  try {
+    localStorage.setItem("plot-theme", light ? "light" : "dark");
+  } catch (e) {}
+}
+
+$("theme").addEventListener("click", () => {
+  applyTheme(!document.documentElement.classList.contains("light"));
+});
+applyTheme(document.documentElement.classList.contains("light"));
 
 $("polarity").addEventListener("click", () => {
   state.polarity = state.polarity === "strain" ? "cover" : "strain";
