@@ -41,7 +41,7 @@ const state = {
   parity: false,
   tool: "brush",
   brush: 28,
-  place: "Zürich Kreis 5",
+  place: "Screenshot",
   dirty: false,
   reading: null,
   undo: [],
@@ -984,10 +984,10 @@ window.addEventListener("keydown", (event) => {
 });
 
 async function loadSpecimen() {
-  const res = await fetch("specimen.png");
+  const res = await fetch("specimen.png?v=2");
   if (!res.ok) throw new Error("specimen missing");
   const blob = await res.blob();
-  await loadBlob(blob, "Zürich Kreis 5");
+  await loadBlob(blob, "Screenshot");
 }
 
 syncControls();
