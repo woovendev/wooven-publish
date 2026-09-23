@@ -141,7 +141,10 @@ export function survey(pixels, width, height, mask, opt) {
 
   let visible = 0;
   let tracked = 0;
-  let excluded = 0;
+  let excludedBlack = 0;
+  let excludedPaint = 0;
+  let blackPixels = 0;
+  const hatchStep = opt.hatchStep || 32;
   // Reused so the census does not allocate a colour object per pixel.
   const hsl = { h: 0, s: 0, l: 0 };
 
@@ -158,6 +161,7 @@ export function survey(pixels, width, height, mask, opt) {
       const painted = mask ? mask[p] === 1 : false;
       const isBlack = r <= cut && g <= cut && b <= cut;
       const dropped = a < 16 || painted || (excludeBlack && isBlack);
+      if (isBlack) blackPixels++;
       let match = false;
       if (!dropped) {
         visible++;
@@ -166,12 +170,21 @@ export function survey(pixels, width, height, mask, opt) {
           match = isTracked(type, hsl.h, hsl.s, hsl.l, samples, hueWindow, minSat, lightWindow);
           if (match) tracked++;
         }
+      } else if (painted) {
+        excludedPaint++;
       } else {
-        excluded++;
+        excludedBlack++;
       }
       if (inY && x >= vx && x < vx + vw) {
         const oi = ((y - vy) * vw + (x - vx)) << 2;
-        if (dropped) {
+        if (painted) {
+          const on = (Math.floor(x / hatchStep) + Math.floor(y / hatchStep)) % 2 === 0;
+          const v = on ? 255 : 0;
+          out[oi] = v;
+          out[oi + 1] = v;
+          out[oi + 2] = v;
+          out[oi + 3] = 255;
+        } else if (dropped) {
           out[oi] = 0;
           out[oi + 1] = 0;
           out[oi + 2] = 0;
@@ -192,5 +205,14 @@ export function survey(pixels, width, height, mask, opt) {
   }
 
   const pct = !countOnly && visible > 0 ? (tracked / visible) * 100 : null;
-  return { visible, tracked, excluded, total: width * height, pct };
+  return {
+    visible,
+    tracked,
+    excluded: excludedBlack + excludedPaint,
+    excludedBlack,
+    excludedPaint,
+    blackPixels,
+    total: width * height,
+    pct,
+  };
 }

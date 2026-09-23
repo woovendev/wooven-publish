@@ -137,12 +137,42 @@ button[aria-pressed="true"] {
   box-sizing: border-box;
 }
 
+.sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 2.4vw, 36px);
+  width: min(1080px, 96vw);
+}
+
 .map-slot {
-  width: min(820px, 78vw);
+  width: auto;
   min-height: 0;
   display: grid;
   place-items: center;
   position: relative;
+}
+
+.proof {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.proof canvas {
+  display: block;
+  width: 180px;
+  height: 180px;
+  background: transparent;
+}
+
+.proof figcaption {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
 }
 
 .map-fit {
@@ -329,19 +359,50 @@ body.drag .map-slot {
 }
 
 .slider input[type="range"] {
-  width: 96px;
-  accent-color: #fff;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 128px;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--mute);
+.slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #fff;
+}
+
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  background: #000;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.slider input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #fff;
+  border: 0;
+}
+
+.slider input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #000;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.mask-note {
+  color: rgba(255, 255, 255, 0.72);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
   padding: 0 8px;
 }
 
@@ -358,6 +419,10 @@ body.sample #ink {
 }
 
 @media (max-width: 720px) {
+  .sheet-row {
+    flex-direction: column;
+  }
+
   .map-slot {
     width: min(92vw, 520px);
   }

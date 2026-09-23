@@ -88,6 +88,7 @@ function syncControls() {
   setPressed("modeSample", state.interaction === "sample");
   setPressed("modeMask", state.interaction === "mask");
   setPressed("layer", state.showLayer);
+  setPressed("black", state.excludeBlack);
   setPressed("polarity", state.polarity === "strain");
   $("polarity").textContent = state.polarity === "strain" ? "Rot = viel" : "Rot = wenig";
   hueLabel.hidden = state.rule !== "samples";
@@ -96,6 +97,16 @@ function syncControls() {
   document.querySelectorAll("[data-tool]").forEach((btn) => {
     btn.setAttribute("aria-pressed", btn.dataset.tool === state.tool ? "true" : "false");
   });
+  const note = $("maskNote");
+  if (note) {
+    const notes = {
+      brush: "Pinsel schraffiert Fläche aus der Zählung.",
+      erase: "Radierer holt diese Fläche zurück.",
+      rect: "Rechteck zieht eine Fläche ab.",
+      poly: "Polygon: Punkte setzen, Enter schliesst.",
+    };
+    note.textContent = notes[state.tool] || "";
+  }
   renderSwatches();
 }
 
@@ -194,7 +205,19 @@ function updateMeta(extra) {
       : state.rule === "green"
         ? "Grünfläche im sichtbaren Boden"
         : "Gewählte Farbschicht";
-  meta.textContent = `${pf.format(reading.pct)} % der sichtbaren Fläche · ${nf.format(reading.tracked)} / ${nf.format(reading.visible)} · ${nf.format(reading.excluded)} ausgeschlossen · ${kind}`;
+  const parts = [
+    `${pf.format(reading.pct)} % ohne Schwarz und ohne Maske`,
+    `${nf.format(reading.tracked)} / ${nf.format(reading.visible)}`,
+    `Schwarz ${nf.format(reading.excludedBlack || 0)}`,
+    `Maske ${nf.format(reading.excludedPaint || 0)}`,
+    kind,
+  ];
+  if (!state.excludeBlack && reading.blackPixels > 0) {
+    parts.push("Schwarzmaske ist aus, der schwarze Rand zählt mit");
+  } else if ((reading.excludedBlack || 0) === 0 && (reading.excludedPaint || 0) === 0) {
+    parts.push("kein schwarzer Rand im Bild, das ganze Rechteck zählt");
+  }
+  meta.textContent = parts.join(" · ");
 }
 
 function layoutMap() {
@@ -205,10 +228,16 @@ function layoutMap() {
   const chrome = 68 + (dock?.offsetHeight || 88) + gap;
   const availH = Math.max(120, window.innerHeight - chrome - (copy?.offsetHeight || 280) - gap);
   const maxH = Math.min(availH, window.innerHeight * 0.36);
-  const maxW = Math.min(820, window.innerWidth * 0.74);
+  const maxW = Math.min(640, window.innerWidth * 0.5);
   const scale = Math.min(maxW / state.view.w, maxH / state.view.h);
+  const fittedH = Math.max(1, Math.round(state.view.h * scale));
   fit.style.width = `${Math.max(1, Math.round(state.view.w * scale))}px`;
-  fit.style.height = `${Math.max(1, Math.round(state.view.h * scale))}px`;
+  fit.style.height = `${fittedH}px`;
+  const proof = $("proof");
+  if (proof) {
+    proof.style.width = `${fittedH}px`;
+    proof.style.height = `${fittedH}px`;
+  }
   const { view } = state;
   sheet.dataset.vx = String(view.x);
   sheet.dataset.vy = String(view.y);
@@ -242,6 +271,41 @@ function paintSheet() {
   sheetCtx.putImageData(new ImageData(frame, view.w, view.h), 0, 0);
 }
 
+function drawProof(result) {
+  const wrap = $("proofWrap");
+  const canvas = $("proof");
+  const cap = $("proofCap");
+  if (!wrap || !canvas) return;
+  if (!result || result.pct == null || !result.visible) {
+    wrap.hidden = true;
+    return;
+  }
+  wrap.hidden = false;
+  const n = 10;
+  const size = 400;
+  const gap = 8;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, size, size);
+  const cell = (size - gap * (n + 1)) / n;
+  const greenCells = (result.tracked / result.visible) * 100;
+  for (let i = 0; i < 100; i++) {
+    const gx = i % n;
+    const gy = Math.floor(i / n);
+    const x = gap + gx * (cell + gap);
+    const y = gap + gy * (cell + gap);
+    const fill = Math.min(1, Math.max(0, greenCells - i));
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(x, y, cell, cell);
+    if (fill > 0) {
+      ctx.fillStyle = "#c8f5d4";
+      ctx.fillRect(x, y + cell * (1 - fill), cell, cell * fill);
+    }
+  }
+  if (cap) cap.textContent = `${pf.format(result.pct)} % in 100 Zellen`;
+}
+
 async function resurvey(animate) {
   if (!state.pixels) return;
   const id = ++job;
@@ -259,7 +323,8 @@ async function resurvey(animate) {
     rule: ruleOptions(),
     excludeBlack: state.excludeBlack,
     blackCutoff: BLACK_CUTOFF,
-    showLayer: state.showLayer,
+    showLayer: state.showLayer && state.interaction !== "mask",
+    hatchStep: hatchStep(),
     view,
     out,
   });
@@ -268,6 +333,7 @@ async function resurvey(animate) {
   state.reading = result;
   paintSheet();
   layoutMap();
+  drawProof(result);
   updateMeta();
   const changed = prev == null || result.pct == null || Math.round(prev) !== Math.round(result.pct);
   if (result.pct == null) renderFigure(null, false);
@@ -363,6 +429,13 @@ function imageToScreen(x, y) {
   ];
 }
 
+function hatchStep() {
+  if (!state.view) return 28;
+  const rect = sheet.getBoundingClientRect();
+  const scale = rect.width > 0 ? state.view.w / rect.width : 4;
+  return Math.max(8, Math.round(scale * 8));
+}
+
 function brushRadius() {
   const rect = sheet.getBoundingClientRect();
   return (state.brush / 2) * (state.view.w / rect.width);
@@ -402,8 +475,8 @@ function previewStamp(x, y, radius, erase) {
   sheetCtx.save();
   sheetCtx.beginPath();
   sheetCtx.arc(px, py, radius, 0, Math.PI * 2);
+  sheetCtx.clip();
   if (erase) {
-    sheetCtx.clip();
     sheetCtx.drawImage(
       state.source,
       state.view.x,
@@ -416,8 +489,19 @@ function previewStamp(x, y, radius, erase) {
       state.view.h,
     );
   } else {
+    const step = hatchStep();
     sheetCtx.fillStyle = "#000";
-    sheetCtx.fill();
+    sheetCtx.fillRect(px - radius, py - radius, radius * 2, radius * 2);
+    sheetCtx.fillStyle = "#fff";
+    const x0 = Math.floor((x - radius) / step) * step;
+    const y0 = Math.floor((y - radius) / step) * step;
+    for (let iy = y0; iy <= y + radius; iy += step) {
+      for (let ix = x0; ix <= x + radius; ix += step) {
+        if ((Math.floor(ix / step) + Math.floor(iy / step)) % 2 === 0) {
+          sheetCtx.fillRect(ix - state.view.x, iy - state.view.y, step, step);
+        }
+      }
+    }
   }
   sheetCtx.restore();
 }
@@ -634,7 +718,7 @@ ink.addEventListener("pointermove", (event) => {
   lastPt = pt;
 });
 
-ink.addEventListener("pointerup", (event) => {
+function finishStroke(event) {
   if (state.tool === "rect" && rectStart && state.interaction === "mask") {
     const pt = pointerToImage(event);
     fillRect(rectStart, pt);
@@ -648,7 +732,10 @@ ink.addEventListener("pointerup", (event) => {
   lastPt = null;
   clearInk();
   resurvey(true);
-});
+}
+
+ink.addEventListener("pointerup", finishStroke);
+ink.addEventListener("pointercancel", finishStroke);
 
 ink.addEventListener("pointerleave", () => {
   loupe.hidden = true;
@@ -684,6 +771,7 @@ $("modeMask").addEventListener("click", () => {
   if (state.interaction !== "mask") state.poly = [];
   syncControls();
   clearInk();
+  resurvey(false);
 });
 
 $("layer").addEventListener("click", () => {
@@ -703,8 +791,9 @@ $("hue").addEventListener("input", (event) => {
   if (state.rule === "samples") resurvey(true);
 });
 
-$("black").addEventListener("change", (event) => {
-  state.excludeBlack = event.target.checked;
+$("black").addEventListener("click", () => {
+  state.excludeBlack = !state.excludeBlack;
+  syncControls();
   resurvey(true);
 });
 

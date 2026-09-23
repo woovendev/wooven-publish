@@ -23,15 +23,21 @@
     </header>
 
     <main class="stage">
-      <div class="map-slot" id="slot">
-        <div class="map-fit" id="fit" hidden>
-          <canvas id="sheet" aria-label="Kartenausschnitt"></canvas>
-          <canvas id="ink" aria-hidden="true"></canvas>
+      <div class="sheet-row">
+        <div class="map-slot" id="slot">
+          <div class="map-fit" id="fit" hidden>
+            <canvas id="sheet" aria-label="Kartenausschnitt"></canvas>
+            <canvas id="ink" aria-hidden="true"></canvas>
+          </div>
+          <div class="drop" id="drop">
+            <p>Karte ablegen</p>
+            <span>PNG, JPG · Berechnung im Browser</span>
+          </div>
         </div>
-        <div class="drop" id="drop">
-          <p>Karte ablegen</p>
-          <span>PNG, JPG · Berechnung im Browser</span>
-        </div>
+        <figure class="proof" id="proofWrap" hidden>
+          <canvas id="proof" width="400" height="400" aria-label="Zehn mal zehn der sichtbaren Fläche"></canvas>
+          <figcaption id="proofCap">100 Zellen = gezählte Fläche</figcaption>
+        </figure>
       </div>
 
       <div class="copy">
@@ -59,7 +65,7 @@ Zürich Kreis 5</div>
         <button type="button" id="polarity" aria-pressed="true">Rot = viel</button>
         <div class="swatches" id="swatches"></div>
         <label class="slider" id="hueLabel" hidden>Fenster <input id="hue" type="range" min="4" max="64" value="22" /></label>
-        <label class="check"><input id="black" type="checkbox" checked /> Schwarzmaske</label>
+        <button type="button" id="black" aria-pressed="true">Schwarzmaske</button>
       </div>
       <div class="dock-row" id="maskRow" hidden>
         <button type="button" data-tool="brush" aria-pressed="true">Pinsel</button>
@@ -69,6 +75,7 @@ Zürich Kreis 5</div>
         <label class="slider">Grösse <input id="brush" type="range" min="8" max="96" value="28" /></label>
         <button type="button" id="undo">Zurück</button>
         <button type="button" id="clearMask">Leeren</button>
+        <span class="mask-note" id="maskNote">Schraffur zählt nicht</span>
       </div>
       <p class="meta" id="meta">Karte ablegen. Schwarz maskierte Pixel zählen nicht zur sichtbaren Fläche.</p>
     </footer>
