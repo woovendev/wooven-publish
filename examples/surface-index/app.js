@@ -38,6 +38,7 @@ const state = {
   hueWindow: 22,
   excludeBlack: true,
   showLayer: true,
+  parity: false,
   tool: "brush",
   brush: 28,
   place: "Zürich Kreis 5",
@@ -224,33 +225,73 @@ function layoutMap() {
   if (!state.view) return;
   const copy = document.querySelector(".copy");
   const dock = document.querySelector(".dock");
+  const slot = $("slot");
   const gap = 28;
   const chrome = 68 + (dock?.offsetHeight || 88) + gap;
   const availH = Math.max(120, window.innerHeight - chrome - (copy?.offsetHeight || 280) - gap);
   const maxH = Math.min(availH, window.innerHeight * 0.36);
   const narrow = window.innerWidth < 760;
-  $("slot").classList.toggle("stack-proof", narrow);
+  slot.classList.toggle("stack-proof", narrow);
   const gutter = 20;
   const captionH = 22;
-  const edge = 32;
-  let scale = Math.min(Math.min(640, window.innerWidth * 0.46) / state.view.w, maxH / state.view.h);
+  const buttonH = 26;
+  const edge = 28;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let scale = Math.min(Math.min(640, vw * 0.46) / state.view.w, maxH / state.view.h);
   if (!narrow) {
-    const room = window.innerWidth / 2 - edge - gutter + captionH;
+    const room = vw / 2 - edge - gutter + captionH;
     const fitScale = room / (state.view.w / 2 + state.view.h);
     if (fitScale < scale) scale = fitScale;
   } else {
-    scale = Math.min((window.innerWidth * 0.86) / state.view.w, maxH / state.view.h);
+    scale = Math.min((vw * 0.86) / state.view.w, maxH / state.view.h);
   }
-  const fittedW = Math.max(1, Math.round(state.view.w * scale));
-  const fittedH = Math.max(1, Math.round(state.view.h * scale));
-  fit.style.width = `${fittedW}px`;
-  fit.style.height = `${fittedH}px`;
+  const pack = (s) => {
+    const Mw = Math.max(1, Math.round(state.view.w * s));
+    const Mh = Math.max(1, Math.round(state.view.h * s));
+    const side = state.parity ? Math.sqrt(Mw * Mh) : Math.max(96, Mh - captionH);
+    return { Mw, Mh, side };
+  };
+  if (state.parity) {
+    for (let i = 0; i < 6; i++) {
+      const { Mw, Mh, side } = pack(scale);
+      const mapLeft = (vw - Mw) / 2;
+      const gridRight = mapLeft + Mw + gutter + side;
+      const shift = narrow ? 0 : Math.max(0, gridRight - (vw - edge));
+      const left = mapLeft - shift;
+      const right = gridRight - shift;
+      let overflow = Math.max(0, edge - left, right - (vw - edge));
+      const copyH = copy?.offsetHeight || 280;
+      const dockH = dock?.offsetHeight || 88;
+      const inner = vh - 68 - 96;
+      const mapTop = 68 + Math.max(0, (inner - (Mh + gap + copyH)) / 2);
+      const gridBottom = mapTop + captionH + side + buttonH;
+      const vLimit = vh - dockH - 8;
+      if (gridBottom > vLimit) overflow = Math.max(overflow, gridBottom - vLimit);
+      if (overflow < 0.5) break;
+      const group = Mw + gutter + side;
+      scale *= Math.max(0.55, (group - overflow) / group);
+    }
+  }
+  const { Mw, Mh, side } = pack(scale);
+  fit.style.width = `${Mw}px`;
+  fit.style.height = `${Mh}px`;
   const proof = $("proof");
   if (proof) {
-    const col = Math.max(96, fittedH - captionH);
-    proof.style.width = `${col}px`;
-    proof.style.height = `${col}px`;
+    proof.style.width = `${side}px`;
+    proof.style.height = `${side}px`;
   }
+  let shift = 0;
+  if (state.parity && !narrow) {
+    const mapLeft = (vw - Mw) / 2;
+    const gridRight = mapLeft + Mw + gutter + side;
+    shift = Math.max(0, gridRight - (vw - edge));
+    if (mapLeft - shift < edge) shift = Math.max(0, mapLeft - edge);
+  }
+  const slide = `translateX(${-shift}px)`;
+  slot.style.transform = slide;
+  if (copy) copy.style.transform = slide;
+  document.body.classList.add("laid-out");
   const { view } = state;
   sheet.dataset.vx = String(view.x);
   sheet.dataset.vy = String(view.y);
@@ -794,6 +835,12 @@ $("layer").addEventListener("click", () => {
   state.showLayer = !state.showLayer;
   syncControls();
   resurvey(false);
+});
+
+$("parity").addEventListener("click", () => {
+  state.parity = !state.parity;
+  $("parity").setAttribute("aria-pressed", state.parity ? "true" : "false");
+  layoutMap();
 });
 
 $("polarity").addEventListener("click", () => {
