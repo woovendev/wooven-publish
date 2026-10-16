@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#12110f">
+  <meta name="description" content="An hourglass driven by a WebGL sand simulation. Tap to flip.">
+  <title>Hourglass</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Sand clock</p>
+    <div class="stage">
+      <canvas id="glass" width="800" height="800" tabindex="0" role="button" aria-label="Flip the hourglass"></canvas>
+      <p id="fallback" class="fallback" hidden>WebGL isn’t available in this browser, so the sand simulation can’t run.</p>
+    </div>
+    <p id="time" class="time" aria-live="polite">3:00</p>
+    <div class="durations" role="group" aria-label="Full glass duration">
+      <button type="button" data-seconds="60">1 min</button>
+      <button type="button" data-seconds="180" aria-pressed="true">3 min</button>
+      <button type="button" data-seconds="300">5 min</button>
+    </div>
+    <p class="hint">Tap the glass to flip<span class="hint-key"> · Space</span></p>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>
